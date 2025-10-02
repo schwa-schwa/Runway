@@ -1,0 +1,20 @@
+# OS / IDE specific
+.DS_Store
+.idea/
+.vscode/
+*.swo
+
+# Dependencies
+/frontend/node_modules
+/backend/venv
+
+# Build artifacts
+/frontend/build
+
+# Django specific
+*.log
+*.pot
+*.pyc
+__pycache__/
+db.sqlite3
+/media/
