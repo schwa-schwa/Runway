@@ -167,20 +167,20 @@ function ResultPage() {
         {/* --- 左下：過去との比較とランキング --- */}
         <Paper elevation={6} sx={{ ...paperStyle, display: 'flex', flexDirection: 'column', justifyContent: 'space-around', textAlign: 'center' }}>
           <Box sx={{ flexShrink: 1 }}>
-            <Typography variant="h5" component="h2" gutterBottom >
+            <Typography component="h2" gutterBottom sx={{ fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', fontWeight: 500 }}>
               自己ベスト比較
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4, mt: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: { xs: 2, sm: 4 }, mt: 2 }}>
               <Box>
                 <Typography variant="caption" display="block" color="text.secondary">今回</Typography>
-                <Typography variant="h2" component="p" sx={{ fontWeight: 'bold', color: isBestScore ? '#FF8E53' : '#FE6B8B' }}>
+                <Typography component="p" sx={{ fontWeight: 'bold', color: isBestScore ? '#FF8E53' : '#FE6B8B', fontSize: 'clamp(2rem, 6vw, 3.75rem)', lineHeight: 1.2 }}>
                   {resultData.overall_score}
                 </Typography>
               </Box>
-              <Typography variant="h4" color="text.secondary">vs</Typography>
+              <Typography color="text.secondary" sx={{ fontSize: 'clamp(1.5rem, 4vw, 2.125rem)' }}>vs</Typography>
               <Box>
                 <Typography variant="caption" display="block" color="text.secondary">自己ベスト</Typography>
-                <Typography variant="h2" component="p" sx={{ fontWeight: 'bold' }}>
+                <Typography component="p" sx={{ fontWeight: 'bold', fontSize: 'clamp(2rem, 6vw, 3.75rem)', lineHeight: 1.2 }}>
                   {personalBest === null ? '...' : personalBest}
                 </Typography>
               </Box>
@@ -191,18 +191,20 @@ function ResultPage() {
           </Box>
           <Divider sx={{ my: 2 }} />
           <Box sx={{ flexShrink: 1 }}>
-            <Typography variant="h5" component="h2" gutterBottom>
+            <Typography component="h2" gutterBottom sx={{ fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', fontWeight: 500 }}>
               ランキング
             </Typography>
-            <Typography variant="h2" component="p" sx={{ fontWeight: 'bold' }}>
-              {rank === null ? '...' : rank}
-              <Typography variant="h5" component="span" sx={{ ml: 1, color: 'text.secondary' }}>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center' }}>
+              <Typography component="p" sx={{ fontWeight: 'bold', fontSize: 'clamp(2rem, 6vw, 3.75rem)', lineHeight: 1.2 }}>
+                {rank === null ? '...' : rank}
+              </Typography>
+              <Typography component="span" sx={{ color: 'text.secondary', fontWeight: 'bold', fontSize: 'clamp(1rem, 3vw, 1.5rem)', ml: 1 }}>
                 位
               </Typography>
-              <Typography variant="body1" component="span" sx={{ ml: 1.5, color: 'text.secondary' }}>
+              <Typography component="span" sx={{ color: 'text.secondary', fontSize: 'clamp(0.8rem, 2vw, 1rem)', ml: 1.5 }}>
                 / {totalParticipants === null ? '...' : totalParticipants}人中
               </Typography>
-            </Typography>
+            </Box>
           </Box>
         </Paper>
 

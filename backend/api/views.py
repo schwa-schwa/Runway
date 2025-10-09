@@ -61,3 +61,53 @@ class ScoreCreateAPIView(APIView):
         
         response_serializer = ScoreSerializer(instance, context={'request': request})
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+
+class RankingAPIView(APIView):
+    """
+    チャレンジごとの総合ランキングと、指定されたユーザーの順位を返すAPIビュー。
+    GET /api/ranking/?challenge=<challenge_id>&user=<user_id>
+    """
+    def get(self, request, *args, **kwargs):
+        # 1. クエリパラメータから challenge_id を取得
+        challenge_id = request.query_params.get('challenge')
+        user_id = request.query_params.get('user') # user_idも取得（後で使います）
+
+        if not challenge_id:
+            return Response(
+                {"error": "challenge ID is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 2. リーダーボードの元データをデータベースから取得
+        leaderboard_query = Score.objects.filter(challenge=challenge_id).values('user', 'user__name').annotate(max_score=Max('overall_score')).order_by('-max_score')
+
+        # 3. 取得したデータを、ランキング形式のリストに変換（上位10名）
+        leaderboard_data = []
+        for i, entry in enumerate(leaderboard_query[:10]):
+            leaderboard_data.append({
+                "rank": i + 1,
+                "user_id": entry['user'],
+                "user_name": entry['user__name'],
+                "score": entry['max_score']
+            })
+        
+        my_rank_data = None
+        if user_id:
+            # user_idがURLで指定されている場合のみ、自分の順位を探す
+            for i, entry in enumerate(leaderboard_query):
+                # user_idは文字列なので、比較のために整数(int)に変換する
+                if entry['user'] == int(user_id):
+                    my_rank_data = {
+                        "rank": i + 1,
+                        "user_id": entry['user'],
+                        "user_name": entry['user__name'],
+                        "score": entry['max_score']
+                    }
+                    break # 自分の順位が見つかったら、ループを終了する
+        
+        # 4. 生成したリーダーボードをレスポンスとして返す
+        return Response({
+            "leaderboard": leaderboard_data,
+            "my_rank": my_rank_data,
+        })
