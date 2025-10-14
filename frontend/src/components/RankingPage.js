@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../contexts/UserContext';
 import { 
-  Box, Typography, Paper, List, ListItem, ListItemText, 
+  Box, Typography, Paper, List, ListItemText, 
   CircularProgress, Alert, Select, MenuItem, FormControl, InputLabel, Avatar
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
