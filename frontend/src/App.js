@@ -6,6 +6,7 @@ import ChallengeSelectionPage from './components/ChallengeSelectionPage';
 import ScoringPage from './components/ScoringPage';
 import ResultPage from './components/ResultPage';
 import RankingPage from './components/RankingPage';
+import GrowthReportPage from './components/GrowthReportPage';
 
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
           <Route path='/scoring/:challengeId' element={<ScoringPage/>}/>
           <Route path="/result" element={<ResultPage />} />
           <Route path="/ranking" element={<RankingPage />} />
+          <Route path="/report" element={<GrowthReportPage />} />
         </Routes>
       </UserProvider>
     </div>

@@ -111,3 +111,92 @@ class RankingAPIView(APIView):
             "leaderboard": leaderboard_data,
             "my_rank": my_rank_data,
         })
+
+class ScoreHistoryView(APIView):
+    """
+    特定ユーザーの、特定チャレンジにおけるスコアの時系列データを返す。
+    GET /api/scores/history/?user=<user_id>&challenge=<challenge_id>
+    """
+    def get(self, request, *args, **kwargs):
+        user_id = request.query_params.get('user')
+        challenge_id = request.query_params.get('challenge')
+
+        if not user_id or not challenge_id:
+            return Response(
+                {"error": "user and challenge ID are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        history_query = Score.objects.filter(
+            user_id=user_id,
+            challenge_id=challenge_id
+        ).order_by('created_at')
+
+        # 4. 必要なデータだけを抽出・整形 (idを追加)
+        data = list(history_query.values('id', 'created_at', 'overall_score'))
+
+        # 5. フロントエンドが使いやすいように最終調整
+        for item in data:
+            item['date'] = item.pop('created_at').strftime('%Y-%m-%d')
+            item['score'] = item.pop('overall_score')
+            # 'id' は pop せずにそのまま残す
+
+        return Response(data)
+
+from django.db.models import Avg, FloatField, Case, When
+from django.db.models.functions import Cast
+from django.db.models.fields.json import KeyTextTransform
+
+class ScoreAverageComparisonView(APIView):
+    """
+    特定チャレンジにおける「自分の平均スコア」と「全ユーザーの平均スコア」を返す。
+    GET /api/scores/average_comparison/?user=<user_id>&challenge=<challenge_id>
+    """
+    def get(self, request, *args, **kwargs):
+        user_id = request.query_params.get('user')
+        challenge_id = request.query_params.get('challenge')
+
+        if not user_id or not challenge_id:
+            return Response(
+                {"error": "user and challenge ID are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        
+        chart_data_keys = [
+            'symmetry',
+            'trunk_uprightness',
+            'gravity_stability',
+            'rhythmic_accuracy',
+            'movement_smoothness'
+        ]
+        
+        aggregations = {
+            'overall_average': Avg('overall_score'),
+            'user_average': Avg(Case(When(user_id=user_id, then='overall_score'), output_field=FloatField()))
+        }
+        
+        for key in chart_data_keys:
+            aggregations[f'overall_{key}_avg'] = Avg(Cast(KeyTextTransform(key, 'chart_data'), FloatField()))
+            
+            aggregations[f'user_{key}_avg'] = Avg(Case(When(user_id=user_id, then=Cast(KeyTextTransform(key, 'chart_data'), FloatField())), output_field=FloatField()))
+
+        
+        all_averages = Score.objects.filter(challenge_id=challenge_id).aggregate(**aggregations)
+        user_chart_data_averages = {
+            key: round(all_averages.get(f'user_{key}_avg') or 0, 3) for key in chart_data_keys
+        }
+        overall_chart_data_averages = {
+            key: round(all_averages.get(f'overall_{key}_avg') or 0, 3) for key in chart_data_keys
+        }
+
+        # 全体の平均スコアを計算
+        overall_scores = Score.objects.filter(challenge_id=challenge_id)
+        overall_average = overall_scores.aggregate(Avg('overall_score'))['overall_score__avg'] or 0
+
+        return Response({
+            "user_average": round(all_averages.get('user_average') or 0, 3),
+            "overall_average": round(all_averages.get('overall_average') or 0, 3),
+            "user_chart_data_averages": user_chart_data_averages,
+            "overall_chart_data_averages": overall_chart_data_averages,
+        })

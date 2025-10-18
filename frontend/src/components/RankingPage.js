@@ -18,7 +18,7 @@ const PodiumItem = styled(Paper)(({ theme, rank }) => ({
   borderColor: rank === 1 ? '#ffd700' : (rank === 2 ? '#c0c0c0' : '#cd7f32'),
   boxShadow: `0 0 15px ${rank === 1 ? '#ffd700' : (rank === 2 ? '#c0c0c0' : '#cd7f32')}`,
   order: rank === 1 ? 2 : (rank === 2 ? 1 : 3), // 2位を中央に
-  transform: rank === 1 ? 'translateY(-20px)' : 'none', // 1位を少し上に
+  transform: rank === 1 ? 'translateY(-20px)' : (rank === 2 ? 'translateY(-10px)' : 'none'), // 1位を少し上に
 }));
 
 const RankListItem = styled(Paper)(({ theme, isCurrentUser }) => ({

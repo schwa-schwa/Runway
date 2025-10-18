@@ -109,7 +109,7 @@ function DashboardPage() {
           <Paper elevation={3} sx={{ p: 2, mt: 2 }}>
             <Typography variant="h6" gutterBottom>ナビゲーション</Typography>
             <Stack spacing={1}>
-              <Button startIcon={<BarChartIcon />} variant="text" sx={{ justifyContent: 'flex-start' }}>レポート</Button>
+              <Button startIcon={<BarChartIcon />} variant="text" sx={{ justifyContent: 'flex-start' }} onClick={() => navigate('/report')}>レポート</Button>
               <Button startIcon={<LeaderboardIcon />} variant="text" sx={{ justifyContent: 'flex-start' }} onClick={() => navigate('/ranking')}>ランキング</Button>
             </Stack>
           </Paper>
