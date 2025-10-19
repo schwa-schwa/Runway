@@ -7,9 +7,8 @@ import {
 import { styled } from '@mui/material/styles';
 
 // --- Styled Components ---
-const PodiumItem = styled(Paper)(({ theme, rank }) => ({
-  background: 'linear-gradient(145deg, #4a477a, #3e3c66)',
-  color: 'white',
+const PodiumItem = styled(Paper)(({ theme, rank, isCurrentUser }) => ({
+  background: isCurrentUser ? '#e3dffc' : theme.palette.background.paper,
   padding: theme.spacing(2),
   textAlign: 'center',
   width: '30%',
@@ -22,15 +21,14 @@ const PodiumItem = styled(Paper)(({ theme, rank }) => ({
 }));
 
 const RankListItem = styled(Paper)(({ theme, isCurrentUser }) => ({
-  background: isCurrentUser ? 'linear-gradient(90deg, #6e5a9e, #5a4a8e)' : 'rgba(255,255,255,0.08)',
-  color: 'white',
+  background: isCurrentUser ? '#e3dffc' : theme.palette.background.paper,
   marginBottom: theme.spacing(1),
   padding: theme.spacing(1, 2),
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
   borderRadius: '10px',
-  border: isCurrentUser ? '1px solid #a78dff' : '1px solid rgba(255,255,255,0.2)',
+  border: isCurrentUser ? `2px solid ${theme.palette.primary.main}` : 'none',
 }));
 
 
@@ -91,28 +89,22 @@ const RankingPage = () => {
   const others = leaderboard.slice(3);
 
   return (
-    <Box sx={{ p: 3, background: '#1e1d32', minHeight: '100vh', color: 'white' }}>
+    <Box sx={{ flexGrow: 1, p: 3, background: '#f4f6f8', minHeight: '100vh' }}>
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', textAlign: 'center', mb: 2 }}>
         LEADERBOARD
       </Typography>
 
       <FormControl fullWidth sx={{ mb: 4 }}>
-        <InputLabel id="challenge-select-label" sx={{color: 'white'}}>チャレンジ</InputLabel>
+        <InputLabel id="challenge-select-label">チャレンジ</InputLabel>
         <Select
           labelId="challenge-select-label"
           value={selectedChallenge}
           label="チャレンジ"
           onChange={handleChallengeChange}
           disabled={challenges.length === 0}
-          sx={{ 
-            color: 'white', 
-            '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.5)' },
-            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
-            '.MuiSvgIcon-root': { color: 'white' }
-          }}
         >
           {challenges.map((challenge) => (
-            <MenuItem key={challenge.id} value={challenge.id} sx={{color: 'black'}}>{challenge.name}</MenuItem>
+            <MenuItem key={challenge.id} value={challenge.id}>{challenge.name}</MenuItem>
           ))}
         </Select>
       </FormControl>
@@ -120,23 +112,22 @@ const RankingPage = () => {
       {/* --- Your Rank --- */}
       {rankingData && (
         rankingData.my_rank ? (
-          <Paper sx={{ 
+          <Paper sx={(theme) => ({ 
             p: 2, 
             mb: 4, 
-            background: 'linear-gradient(90deg, #6e5a9e, #5a4a8e)', 
-            color: 'white',
-            border: '1px solid #a78dff',
+            background: '#e3dffc', 
+            border: `2px solid ${theme.palette.primary.main}`,
             textAlign: 'center'
-          }}>
+          })}>
             <Typography variant="h6">YOUR RANK</Typography>
             <Typography variant="h4" component="p" sx={{fontWeight: 'bold'}}>
               {rankingData.my_rank.rank}
               <Typography component="span" sx={{fontSize: '1rem', ml: 0.5}}>th</Typography>
             </Typography>
-            <Typography variant="body1" sx={{color: '#ffd700'}}>{rankingData.my_rank.score} pts</Typography>
+            <Typography variant="body1">{rankingData.my_rank.score} pts</Typography>
           </Paper>
         ) : (
-          !loading && <Alert severity="info" sx={{ mb: 4, background: 'rgba(255,255,255,0.1)', color: 'white' }}>
+          !loading && <Alert severity="info" sx={{ mb: 4 }}>
             このチャレンジにはまだ参加していません。
           </Alert>
         )
@@ -150,10 +141,10 @@ const RankingPage = () => {
           {/* --- Podium (Top 3) --- */}
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 1, mb: 4, minHeight: 180 }}>
             {top3.map((entry) => (
-              <PodiumItem key={entry.user_id} rank={entry.rank}>
+              <PodiumItem key={entry.user_id} rank={entry.rank} isCurrentUser={entry.user_id === currentUser.id}>
                 <Avatar sx={{ width: 56, height: 56, margin: 'auto', mb: 1, background: '#a78dff' }}>{entry.user_name.charAt(0)}</Avatar>
                 <Typography variant="h6" sx={{fontWeight: 'bold'}}>{entry.user_name}</Typography>
-                <Typography variant="body1" sx={{color: '#ffd700'}}>{entry.score} pts</Typography>
+                <Typography variant="body1" color="text.secondary">{entry.score} pts</Typography>
                 <Typography variant="h4" sx={{fontWeight: 'bold'}}>{entry.rank}</Typography>
               </PodiumItem>
             ))}
@@ -168,7 +159,7 @@ const RankingPage = () => {
                   <Avatar sx={{ width: 40, height: 40, background: '#a78dff' }}>{entry.user_name.charAt(0)}</Avatar>
                   <ListItemText primary={entry.user_name} primaryTypographyProps={{fontWeight: 'bold'}} />
                 </Box>
-                <Typography variant="h6" sx={{color: '#ffd700'}}>{entry.score} pts</Typography>
+                <Typography variant="h6" color="text.secondary">{entry.score} pts</Typography>
               </RankListItem>
             ))}
           </List>

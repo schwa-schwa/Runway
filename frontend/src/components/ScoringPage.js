@@ -225,35 +225,25 @@ function ScoringPage() {
     );
   }
 
-  const paperStyle = {
-    p: 2,
-    borderRadius: '16px',
-    border: '1px solid rgba(255, 255, 255, 0.4)',
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-    backdropFilter: 'blur(10px)',
-    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.2)',
-  };
-
   // カウントダウン中と終了後にメッセージをオーバーレイ表示
   const showOverlay = scoringStatus === 'countdown' || (scoringStatus === 'finished' && message === 'FINISH');
 
   return (
     <Box sx={{
+      flexGrow: 1,
+      p: 3,
+      background: '#f4f6f8',
+      minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      p: 3,
       gap: 2,
-      background: 'linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%)',
-      minHeight: '100vh',
-      boxSizing: 'border-box',
-      position: 'relative',
     }}>
       {showOverlay && (
         <Box sx={{
-          position: 'absolute',
+          position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0, 0, 0, 0.3)',
+          background: 'rgba(0, 0, 0, 0.5)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 10,
           '@keyframes zoomAnimation': {
@@ -268,22 +258,11 @@ function ScoringPage() {
         </Box>
       )}
 
-      <Typography variant="h6" color="text.secondary">
-        チャレンジ
-      </Typography>
-      <Typography variant="h2" component="h1" sx={{ fontWeight: 'bold', color: '#1e88e5' }}>
+      <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
         {challenge.name}
       </Typography>
 
-      <Box sx={{ my: 2, height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-        {scoringStatus === 'idle' && (
-          <Button variant='contained' size='large' onClick={handleStartScoring}>
-            採点開始
-          </Button>
-        )}
-      </Box>
-      
-      <Paper sx={{ ...paperStyle, width: '100%', maxWidth: '960px', overflow: 'hidden' }}>
+      <Paper elevation={3} sx={{ width: '100%', maxWidth: '960px', overflow: 'hidden' }}>
         {scoringStatus === 'scoring' && <LinearProgress variant="determinate" value={progress} />}
         <Box sx={{ position: 'relative' }}>
           <video 
@@ -299,6 +278,14 @@ function ScoringPage() {
           />
         </Box>
       </Paper>
+
+      <Box sx={{ my: 2, height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+        {scoringStatus === 'idle' && (
+          <Button variant='contained' size='large' onClick={handleStartScoring}>
+            採点開始
+          </Button>
+        )}
+      </Box>
     </Box>
   );
 }
