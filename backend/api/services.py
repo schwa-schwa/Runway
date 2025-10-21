@@ -8,11 +8,11 @@ class ScoringService:
         self.feedback_text = ""
         
     def calculate_all(self):
-        self._calculate_symmetry()
-        self._calculate_trunk_uprightness()
-        self._calculate_gravity_stability()
-        self._calculate_rhythmic_accuracy()
-        self._calculate_movement_smoothness()
+        self._calculate_symmetry()###対称性
+        self._calculate_trunk_uprightness()###体幹の直立度
+        self._calculate_gravity_stability()###重心の安定性
+        self._calculate_rhythmic_accuracy()###リズムの正確さ　俺これやる
+        self._calculate_movement_smoothness()###動作の滑らかさ
         self.overall_score = round(sum(self.chart_data.values()), 3)
         
         self.feedback_text = self._generate_feedback()
@@ -22,6 +22,7 @@ class ScoringService:
             "overall_score": self.overall_score,
             "feedback_text": self.feedback_text
         }
+
         
     def _calculate_symmetry(self):
         LEFT_SHOULDER = 11
@@ -111,18 +112,77 @@ class ScoringService:
             score = 0
             
         self.chart_data['trunk_uprightness'] = round(score, 3)
+
+     
             
             
             
         
     def _calculate_gravity_stability(self):
         self.chart_data['gravity_stability'] = 15.0
+  
         
+
+        
+    ###def _calculate_rhythmic_accuracy(self):
+        ##self.chart_data['rhythmic_accuracy'] = 17.0
+    ###足の出るタイミングや上下の動きをテンポを判定する]
+    
     def _calculate_rhythmic_accuracy(self):
-        self.chart_data['rhythmic_accuracy'] = 17.0
+        LEFT_ANKLE = 27
+        RIGHT_ANKLE = 28
+        VISIBILITY_THRESHOLD = 0.85
+
+        left_y = []
+        right_y = []
+
+        # --- 足首のY座標をフレームごとに取得 ---
+        for frame_landmarks in self.raw_landmarks:
+            if not (frame_landmarks and frame_landmarks[0]):
+                continue
+            landmarks = frame_landmarks[0]
+            if len(landmarks) > RIGHT_ANKLE:
+                left_ankle = landmarks[LEFT_ANKLE]
+                right_ankle = landmarks[RIGHT_ANKLE]
+
+                if left_ankle.get('visibility', 0) > VISIBILITY_THRESHOLD:
+                    left_y.append(left_ankle['y'])
+                if right_ankle.get('visibility', 0) > VISIBILITY_THRESHOLD:
+                    right_y.append(right_ankle['y'])
+
+        # --- ピーク（足が最も下がる瞬間）を検出 ---
+        def detect_peaks(y_list):
+            peaks = []
+            last_peak = None
+            for i in range(1, len(y_list) - 1):
+                if y_list[i - 1] > y_list[i] < y_list[i + 1]:
+                    if last_peak is not None:
+                        peaks.append(i - last_peak)
+                    last_peak = i
+            return peaks
+
+        left_intervals = detect_peaks(left_y)
+        right_intervals = detect_peaks(right_y)
+        all_intervals = left_intervals + right_intervals
+
+        # --- リズム安定性のスコア計算 ---
+        if all_intervals:
+            avg_interval = sum(all_intervals) / len(all_intervals)
+            variance = sum((x - avg_interval) ** 2 for x in all_intervals) / len(all_intervals)
+            std_dev = math.sqrt(variance)
+
+            score_100 = max(0, 100 - std_dev * 15)
+            score = score_100 / 5.0  # 0〜20点換算
+        else:
+            score = 0
+
+        self.chart_data['rhythmic_accuracy'] = round(score, 3)
+
         
     def _calculate_movement_smoothness(self):
         self.chart_data['movement_smoothness'] = 16.0
+   
     
     def _generate_feedback(self):
         return f"総合スコアは {self.overall_score}点です！"
+    
