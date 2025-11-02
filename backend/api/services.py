@@ -123,10 +123,6 @@ class ScoringService:
   
         
 
-        
-    ###def _calculate_rhythmic_accuracy(self):
-        ##self.chart_data['rhythmic_accuracy'] = 17.0
-    ###足の出るタイミングや上下の動きをテンポを判定する]
     
     def _calculate_rhythmic_accuracy(self):
         LEFT_ANKLE = 27
@@ -136,7 +132,7 @@ class ScoringService:
         left_y = []
         right_y = []
 
-        # --- 足首のY座標をフレームごとに取得 ---
+        
         for frame_landmarks in self.raw_landmarks:
             if not (frame_landmarks and frame_landmarks[0]):
                 continue
@@ -150,7 +146,7 @@ class ScoringService:
                 if right_ankle.get('visibility', 0) > VISIBILITY_THRESHOLD:
                     right_y.append(right_ankle['y'])
 
-        # --- ピーク（足が最も下がる瞬間）を検出 ---
+        
         def detect_peaks(y_list):
             peaks = []
             last_peak = None
@@ -165,14 +161,14 @@ class ScoringService:
         right_intervals = detect_peaks(right_y)
         all_intervals = left_intervals + right_intervals
 
-        # --- リズム安定性のスコア計算 ---
+        
         if all_intervals:
             avg_interval = sum(all_intervals) / len(all_intervals)
             variance = sum((x - avg_interval) ** 2 for x in all_intervals) / len(all_intervals)
             std_dev = math.sqrt(variance)
 
             score_100 = max(0, 100 - std_dev * 15)
-            score = score_100 / 5.0  # 0〜20点換算
+            score = score_100 / 5.0  
         else:
             score = 0
 
