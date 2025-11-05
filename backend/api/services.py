@@ -1,4 +1,5 @@
 import math
+import statistics
 
 class ScoringService:
     def __init__(self, raw_landmarks):
@@ -119,7 +120,43 @@ class ScoringService:
             
         
     def _calculate_gravity_stability(self):
-        self.chart_data['gravity_stability'] = 15.0
+
+        LEFT_HIP = 23
+        RIGHT_HIP = 24
+        VISIBILITY_THRESHOLD = 0.85
+
+        hip_center_x_coords = []
+
+        
+        for frame_landmarks in self.raw_landmarks:
+            if not (frame_landmarks and frame_landmarks[0]):
+                continue 
+
+            landmarks = frame_landmarks[0] 
+
+            
+            if (len(landmarks) > RIGHT_HIP and 
+                landmarks[LEFT_HIP].get('visibility', 0) > VISIBILITY_THRESHOLD and
+                landmarks[RIGHT_HIP].get('visibility', 0) > VISIBILITY_THRESHOLD):
+
+                left_hip_x = landmarks[LEFT_HIP]['x']
+                right_hip_x = landmarks[RIGHT_HIP]['x']
+
+                hip_center_x = (left_hip_x + right_hip_x) / 2
+                hip_center_x_coords.append(hip_center_x)
+
+        score = 0
+        if len(hip_center_x_coords) < 2:
+            
+            score = 20.0
+        else:
+            stdev = statistics.stdev(hip_center_x_coords)
+
+            
+            COEFFICIENT = 400 
+            score = max(0, 20 - (stdev * COEFFICIENT))
+
+        self.chart_data['gravity_stability'] = round(score, 3)
   
         
 
