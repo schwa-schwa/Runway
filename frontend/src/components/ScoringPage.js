@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Typography, Box, CircularProgress, Button, LinearProgress, Paper, IconButton } from '@mui/material';
+import { Typography, Box, CircularProgress, Button, LinearProgress, Paper, IconButton, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { PoseLandmarker, FilesetResolver, DrawingUtils } from '@mediapipe/tasks-vision';
 import { useUser } from '../contexts/UserContext';
@@ -16,6 +16,7 @@ function ScoringPage() {
   const [poseLandmarker, setPoseLandmarker] = useState(null);
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [scoringStatus, setScoringStatus] = useState('idle'); // 'idle', 'countdown', 'scoring', 'finished'
+  const [scoringMode, setScoringMode] = useState('time'); // 'time' or 'manual'
   const [recordedLandmarks, setRecordedLandmarks] = useState([]);
   const [message, setMessage] = useState('');
   const [progress, setProgress] = useState(0); // プログレスバー用のstate
@@ -25,6 +26,12 @@ function ScoringPage() {
   const canvasRef = useRef(null);
   const requestRef = useRef();
   const scoringStatusRef = useRef(scoringStatus);
+
+  const handleModeChange = (event, newMode) => {
+    if (newMode !== null) {
+      setScoringMode(newMode);
+    }
+  };
 
   // チャレンジ情報を取得
   useEffect(() => {
@@ -102,7 +109,7 @@ function ScoringPage() {
         setMessage('START!');
         setTimeout(() => setScoringStatus('scoring'), 500);
       }, 3000);
-    } else if (scoringStatus === 'scoring') {
+    } else if (scoringStatus === 'scoring' && scoringMode === 'time') {
       setMessage('');
       setProgress(0);
       const startTime = Date.now();
@@ -121,7 +128,7 @@ function ScoringPage() {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [scoringStatus]);
+  }, [scoringStatus, scoringMode]);
 
   // スコア送信の管理（データ送信担当）
   useEffect(() => {
@@ -204,6 +211,11 @@ function ScoringPage() {
     setScoringStatus('countdown');
   };
 
+  const handleStopScoring = () => {
+    setMessage('FINISH');
+    setScoringStatus('finished');
+  };
+
   if (error) {
     return <Typography sx={{ mt: 4, textAlign: 'center' }} color="error">エラー: {error}</Typography>;
   }
@@ -279,7 +291,7 @@ function ScoringPage() {
 
 
       <Paper elevation={3} sx={{ width: '100%', maxWidth: '960px', overflow: 'hidden' }}>
-        {scoringStatus === 'scoring' && <LinearProgress variant="determinate" value={progress} />}
+        {scoringStatus === 'scoring' && scoringMode === 'time' && <LinearProgress variant="determinate" value={progress} />}
         <Box sx={{ position: 'relative' }}>
           <video 
             ref={videoRef}
@@ -295,10 +307,27 @@ function ScoringPage() {
         </Box>
       </Paper>
 
-      <Box sx={{ my: 2, height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+      <Box sx={{ my: 2, height: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2}}>
         {scoringStatus === 'idle' && (
-          <Button variant='contained' size='large' onClick={handleStartScoring}>
-            採点開始
+          <>
+            <ToggleButtonGroup
+              color="primary"
+              value={scoringMode}
+              exclusive
+              onChange={handleModeChange}
+              aria-label="Scoring Mode"
+            >
+              <ToggleButton value="time">時間制</ToggleButton>
+              <ToggleButton value="manual">手動</ToggleButton>
+            </ToggleButtonGroup>
+            <Button variant='contained' size='large' onClick={handleStartScoring}>
+              採点開始
+            </Button>
+          </>
+        )}
+        {scoringStatus === 'scoring' && scoringMode === 'manual' && (
+          <Button variant='contained' size='large' color='error' onClick={handleStopScoring}>
+            採点終了
           </Button>
         )}
       </Box>

@@ -12,7 +12,7 @@ class ScoringService:
         self._calculate_symmetry()###対称性
         self._calculate_trunk_uprightness()###体幹の直立度
         self._calculate_gravity_stability()###重心の安定性
-        self._calculate_rhythmic_accuracy()###リズムの正確さ　俺これやる
+        self._calculate_rhythmic_accuracy()###リズムの正確さ
         self._calculate_movement_smoothness()###動作の滑らかさ
         self.overall_score = round(sum(self.chart_data.values()), 3)
         
@@ -148,7 +148,7 @@ class ScoringService:
         score = 0
         if len(hip_center_x_coords) < 2:
             
-            score = 20.0
+            score = 0
         else:
             stdev = statistics.stdev(hip_center_x_coords)
 
