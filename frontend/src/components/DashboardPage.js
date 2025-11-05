@@ -12,8 +12,7 @@ import {
 import { useUser } from '../contexts/UserContext';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import LeaderboardIcon from '@mui/icons-material/Leaderboard';
+
 
 function DashboardPage() {
   const { currentUser } = useUser();
