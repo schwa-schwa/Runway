@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Typography, Box, CircularProgress, Button, LinearProgress, Paper } from '@mui/material';
+import { Typography, Box, CircularProgress, Button, LinearProgress, Paper, IconButton } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { PoseLandmarker, FilesetResolver, DrawingUtils } from '@mediapipe/tasks-vision';
 import { useUser } from '../contexts/UserContext';
 
-const SCORING_DURATION = 10000; // 採点時間（ミリ秒）
+const SCORING_DURATION = 5000; // 採点時間（ミリ秒）
 
 function ScoringPage() {
   const navigate = useNavigate();
@@ -230,6 +231,7 @@ function ScoringPage() {
 
   return (
     <Box sx={{
+      position: 'relative', // For positioning the cancel button
       flexGrow: 1,
       p: 3,
       background: '#f4f6f8',
@@ -239,6 +241,23 @@ function ScoringPage() {
       alignItems: 'center',
       gap: 2,
     }}>
+      <IconButton 
+        aria-label="cancel"
+        onClick={() => navigate('/challenges')}
+        sx={{
+          position: 'absolute',
+          top: 24,
+          right: 24,
+          zIndex: 20, // Ensure it's above other elements
+          backgroundColor: 'rgba(0, 0, 0, 0.3)',
+          '&:hover': {
+            backgroundColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        }}
+      >
+        <CloseIcon sx={{ color: 'white' }} />
+      </IconButton>
+
       {showOverlay && (
         <Box sx={{
           position: 'fixed',
@@ -258,9 +277,6 @@ function ScoringPage() {
         </Box>
       )}
 
-      <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
-        {challenge.name}
-      </Typography>
 
       <Paper elevation={3} sx={{ width: '100%', maxWidth: '960px', overflow: 'hidden' }}>
         {scoringStatus === 'scoring' && <LinearProgress variant="determinate" value={progress} />}

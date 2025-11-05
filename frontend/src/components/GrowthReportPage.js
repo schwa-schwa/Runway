@@ -191,7 +191,7 @@ function GrowthReportPage() {
   }
 
   return (
-    <Box sx={{ flexGrow: 1, p: 3, background: "#f4f6f8", minHeight: "100vh" }}>
+    <>
       <Typography variant="h4" component="h1" sx={{ mb: 3 }}>
         成長レポート
       </Typography>
@@ -422,7 +422,7 @@ function GrowthReportPage() {
           )}
         </Box>
       )}
-    </Box>
+    </>
   );
 }
 

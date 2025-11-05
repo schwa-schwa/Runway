@@ -52,8 +52,7 @@ function ChallengeSelectionPage() {
   }
 
   return (
-    // 全体を囲むBox。ダッシュボードと背景色を合わせる
-    <Box sx={{ flexGrow: 1, p: 3, background: "#f4f6f8", minHeight: "100vh" }}>
+    <>
       <Typography
         variant="h4"
         component="h1"
@@ -129,7 +128,7 @@ function ChallengeSelectionPage() {
           </Paper>
         ))}
       </Box>
-    </Box>
+    </>
   );
 }
 

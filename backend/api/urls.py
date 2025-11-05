@@ -7,7 +7,8 @@ from .views import (
     ScoreViewSet, 
     RankingAPIView,
     ScoreHistoryView,
-    ScoreAverageComparisonView
+    ScoreAverageComparisonView,
+    DashboardAPIView
 )
 
 router = DefaultRouter()
@@ -18,6 +19,7 @@ router.register(r'scores', ScoreViewSet, basename='score')
 
 # 手動で定義するURLを先に記述
 urlpatterns = [
+    path('dashboard/', DashboardAPIView.as_view(), name='dashboard-api'),
     path('score/', ScoreCreateAPIView.as_view(), name='score-create'),
     path('ranking/', RankingAPIView.as_view(), name='ranking-list'),
     path('scores/history/', ScoreHistoryView.as_view(), name='score-history'),

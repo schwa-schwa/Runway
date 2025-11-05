@@ -89,7 +89,7 @@ const RankingPage = () => {
   const others = leaderboard.slice(3);
 
   return (
-    <Box sx={{ flexGrow: 1, p: 3, background: '#f4f6f8', minHeight: '100vh' }}>
+    <>
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', textAlign: 'center', mb: 2 }}>
         LEADERBOARD
       </Typography>
@@ -165,7 +165,7 @@ const RankingPage = () => {
           </List>
         </>
       )}
-    </Box>
+    </>
   );
 };
 

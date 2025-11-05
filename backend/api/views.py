@@ -146,6 +146,7 @@ class ScoreHistoryView(APIView):
 from django.db.models import Avg, FloatField, Case, When
 from django.db.models.functions import Cast
 from django.db.models.fields.json import KeyTextTransform
+from datetime import date, timedelta
 
 class ScoreAverageComparisonView(APIView):
     """
@@ -200,3 +201,78 @@ class ScoreAverageComparisonView(APIView):
             "user_chart_data_averages": user_chart_data_averages,
             "overall_chart_data_averages": overall_chart_data_averages,
         })
+
+class DashboardAPIView(APIView):
+    """
+    ダッシュボードに必要なデータをまとめて返すAPIビュー。
+    GET /api/dashboard/?user=<user_id>
+    """
+    def get(self, request, *args, **kwargs):
+        user_id = request.query_params.get('user')
+        if not user_id:
+            return Response(
+                {"error": "user ID is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # ユーザーの全スコアを取得
+        scores = Score.objects.filter(user=user).order_by('-created_at')
+
+        # --- 統計データの計算 ---
+
+        # 1. レベル
+        total_plays = scores.count()
+        level = (total_plays // 5) + 1
+
+        # 2. ハイスコア (より効率的な方法)
+        high_score_data = scores.aggregate(max_score=Max('overall_score'))
+        high_score = high_score_data['max_score'] or 0
+
+        # 3. 連続プレイ日数
+        streak = 0
+        if total_plays > 0:
+            # ユニークなプレイ日を取得
+            unique_dates = sorted(list(set(scores.values_list('created_at__date', flat=True))), reverse=True)
+            
+            today = date.today()
+            
+            # 最新のプレイが今日か昨日かチェック
+            if (today - unique_dates[0]).days <= 1:
+                streak = 1
+                for i in range(len(unique_dates) - 1):
+                    # 日付の差が1日なら連続とみなす
+                    if (unique_dates[i] - unique_dates[i+1]).days == 1:
+                        streak += 1
+                    else:
+                        break # 連続が途切れたら終了
+
+        # 4. 最近のアクティビティ (N+1問題を回避)
+        recent_activities_query = scores.select_related('challenge')[:3]
+        recent_activities = [
+            {
+                "id": score.id,
+                "challengeName": score.challenge.name,
+                "overall_score": score.overall_score,
+                "date": score.created_at.strftime('%Y-%m-%d')
+            }
+            for score in recent_activities_query
+        ]
+
+        # --- レスポンスを構築 ---
+        response_data = {
+            "userName": user.name,
+            "level": level,
+            "highScore": high_score,
+            "streak": streak,
+            "recentActivities": recent_activities
+        }
+
+        return Response(response_data)
