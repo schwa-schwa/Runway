@@ -59,7 +59,7 @@ function ScoringPage() {
         );
         const newPoseLandmarker = await PoseLandmarker.createFromOptions(vision, {
           baseOptions: {
-            modelAssetPath: `/pose_landmarker_lite.task`,
+            modelAssetPath: `/pose_landmarker_heavy.task`,
             delegate: "GPU"
           },
           runningMode: "VIDEO",
@@ -152,7 +152,7 @@ function ScoringPage() {
           });
           const resultData = await response.json();
           if (!response.ok) throw new Error(resultData.detail || 'APIリクエストに失敗しました。');
-          navigate('/result', { state: { resultData: resultData } });
+          navigate(`/result/${resultData.id}`);
         } catch (err) {
           console.error('スコアの送信に失敗しました:', err);
           alert(`スコアの送信に失敗しました: ${err.message}`);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Box, Typography, Paper, Button, Chip, Divider } from '@mui/material';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, } from 'recharts';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Box, Typography, Paper, Button, Chip, Divider, CircularProgress } from '@mui/material';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 
 // バックエンドの英語キーと、グラフに表示する日本語名を対応させるためのオブジェクト
 const subjectMapping = {
@@ -14,15 +14,77 @@ const subjectMapping = {
 
 function ResultPage() {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { scoreId } = useParams(); // URLからscoreIdを取得
+
+  // --- State管理 ---
+  const [resultData, setResultData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [displayScore, setDisplayScore] = useState(0);
   const [personalBest, setPersonalBest] = useState(null);
   const [isBestScore, setIsBestScore] = useState(false);
   const [rank, setRank] = useState(null);
   const [totalParticipants, setTotalParticipants] = useState(null);
 
-  const resultData = location.state?.resultData;
+  // --- データ取得ロジック ---
+  useEffect(() => {
+    if (!scoreId) {
+      setError("スコアIDが指定されていません。");
+      setLoading(false);
+      return;
+    }
 
+    const fetchResultData = async () => {
+      try {
+        setLoading(true);
+
+        // 1. まずはメインのスコアデータをIDで取得
+        const scoreResponse = await fetch(`http://localhost:8000/api/scores/${scoreId}/`);
+        if (!scoreResponse.ok) {
+          throw new Error(`スコア(ID: ${scoreId})の取得に失敗しました。`);
+        }
+        const mainScoreData = await scoreResponse.json();
+        setResultData(mainScoreData);
+
+        // 2. 関連データを並行して取得
+        const [scoresResponse, rankingResponse] = await Promise.all([
+          fetch(`http://localhost:8000/api/scores/?user=${mainScoreData.user}&challenge=${mainScoreData.challenge}`),
+          fetch(`http://localhost:8000/api/scores/${scoreId}/ranking/`)
+        ]);
+
+        if (!scoresResponse.ok || !rankingResponse.ok) {
+          throw new Error('関連データの取得に失敗しました。');
+        }
+
+        const [pastScores, rankingData] = await Promise.all([
+          scoresResponse.json(),
+          rankingResponse.json()
+        ]);
+        
+        // --- 自己ベストを計算 ---
+        // 今回のスコアを除いた過去のスコアリストを作成
+        const scoreHistory = pastScores.filter(score => score.id !== mainScoreData.id);
+        const bestPastScore = scoreHistory.reduce((max, score) => Math.max(max, score.overall_score), 0);
+        setPersonalBest(bestPastScore);
+        setIsBestScore(mainScoreData.overall_score > bestPastScore);
+
+        // --- ランキング情報をセット ---
+        setRank(rankingData.rank);
+        setTotalParticipants(rankingData.total_participants);
+
+      } catch (err) {
+        console.error(err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResultData();
+  }, [scoreId]);
+
+  // --- スコア表示のアニメーション ---
   useEffect(() => {
     if (!resultData) return;
     const targetScore = resultData.overall_score;
@@ -45,50 +107,20 @@ function ResultPage() {
     return () => clearInterval(timer);
   }, [resultData]);
 
-  useEffect(() => {
-    const fetchPastScores = async () =>{
-      if (!resultData?.challenge) {
-        return;
-      }
-      
-      try {
-        const [scoresResponse, rankingResponse] = await Promise.all([fetch(`http://localhost:8000/api/scores/?user=${resultData.user}&challenge=${resultData.challenge}`), fetch(`http://localhost:8000/api/scores/${resultData.id}/ranking/`)])
-        
-        if (!scoresResponse.ok || !rankingResponse.ok) {
-          throw new Error('過去のスコアの取得に失敗しました。');
-        }
+  // --- ローディング・エラー表示 ---
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>結果を読み込み中...</Typography>
+      </Box>
+    );
+  }
 
-        const [pastScores, rankingData] = await Promise.all([
-          scoresResponse.json(),
-          rankingResponse.json()
-        ]);
-
-        console.log('取得した過去スコア:', pastScores);
-        const scoreHistory = pastScores.slice(1);
-        const bestPastScore = scoreHistory.reduce((max, score) => {
-          return Math.max(max, score.overall_score);
-        },0);
-        setPersonalBest(bestPastScore);
-        setIsBestScore(resultData.overall_score > bestPastScore);
-
-        setRank(rankingData.rank);
-        setTotalParticipants(rankingData.total_participants);
-
-      } catch (error) {
-        console.error(error)
-        setPersonalBest(0);
-        setIsBestScore(true);
-        setRank(1);
-        setTotalParticipants(1);
-      }
-    }
-    fetchPastScores();
-  },[resultData])
-
-  if (!resultData) {
+  if (error) {
     return (
       <Box sx={{ p: 4, textAlign: 'center' }}>
-        <Typography color="error">結果データがありません。</Typography>
+        <Typography color="error">エラー: {error}</Typography>
         <Button variant="contained" sx={{ mt: 2 }} onClick={() => navigate('/')}>
           ユーザー選択に戻る
         </Button>
@@ -96,23 +128,26 @@ function ResultPage() {
     );
   }
 
+  if (!resultData) {
+    return null; // データがなければ何も表示しない
+  }
+
+  // --- 描画ロジック ---
   const chartDataForRecharts = Object.keys(resultData.chart_data).map(key => ({
     subject: subjectMapping[key] || key,
     score: resultData.chart_data[key],
     fullMark: 20,
   }));
-  
 
-  // ★★★ 半透明のスタイルを共通化 ★★★
   const paperStyle = {
     flex: '1 1 50%',
     minWidth: 0,
     p: 3,
     borderRadius: '16px',
-    border: '1px solid rgba(255, 255, 255, 0.4)',       // 枠線を少し濃く
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',    // 透明度を少し下げる
-    backdropFilter: 'blur(10px)',                       // ぼかし効果
-    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.2)', // 影を調整
+    border: '1px solid rgba(255, 255, 255, 0.4)',
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    backdropFilter: 'blur(10px)',
+    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.2)',
   };
 
   return (
@@ -125,9 +160,8 @@ function ResultPage() {
       boxSizing: 'border-box',
       background: 'linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%)',
     }}>
-      {/* --- 上段の行 --- */}
+      {/* ... JSX部分は変更なし ... */}
       <Box sx={{ display: 'flex', flex: 1, gap: 3, minHeight: 0 }}>
-        {/* --- 左上：総合スコア --- */}
         <Paper elevation={6} sx={{ ...paperStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
           <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
             <Typography
@@ -145,12 +179,11 @@ function ResultPage() {
               {displayScore}
             </Typography>
             <Typography variant="h2" component="span" sx={{ color: '#FE6B8B', ml: 1, fontWeight: 'bold' }}>
-              点 
+              点
             </Typography>
           </Box>
         </Paper>
 
-        {/* --- 右上：レーダーチャート --- */}
         <Paper elevation={6} sx={{ ...paperStyle }}>
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartDataForRecharts}>
@@ -162,9 +195,7 @@ function ResultPage() {
         </Paper>
       </Box>
 
-      {/* --- 下段の行 --- */}
       <Box sx={{ display: 'flex', flex: 1, gap: 3, minHeight: 0 }}>
-        {/* --- 左下：過去との比較とランキング --- */}
         <Paper elevation={6} sx={{ ...paperStyle, display: 'flex', flexDirection: 'column', justifyContent: 'space-around', textAlign: 'center' }}>
           <Box sx={{ flexShrink: 1 }}>
             <Typography component="h2" gutterBottom sx={{ fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', fontWeight: 500 }}>
@@ -208,7 +239,6 @@ function ResultPage() {
           </Box>
         </Paper>
 
-        {/* --- 右下：AIフィードバック --- */}
         <Paper elevation={6} sx={{ ...paperStyle, display: 'flex', flexDirection: 'column' }}>
           <Typography variant="h5" component="h2" gutterBottom>AIからのアドバイス</Typography>
           <Box sx={{ flexGrow: 1, overflowY: 'auto', mt: 1, p: 2, background: 'rgba(255, 255, 255, 0.5)', borderRadius: '8px' }}>
@@ -220,7 +250,6 @@ function ResultPage() {
             最初の画面に戻る
           </Button>
         </Paper>
-
       </Box>
     </Box>
   );

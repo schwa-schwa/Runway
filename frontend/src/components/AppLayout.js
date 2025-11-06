@@ -47,11 +47,11 @@ function AppLayout() {
 
   const drawerContent = (
     <div>
-      <Toolbar>
+{      <Toolbar>
         <Typography variant="h6" noWrap component="div">
-          Runway
+          Walksense
         </Typography>
-      </Toolbar>
+      </Toolbar>}
       <Divider />
       {currentUser && (
         <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -111,7 +111,7 @@ function AppLayout() {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div">
-            Runway
+            Walksense
           </Typography>
         </Toolbar>
       </AppBar>

@@ -17,7 +17,7 @@ function App() {
           {/* Routes without the sidebar */}
           <Route path='/' element = {<UserSelectionPage/>}/>
           <Route path='/scoring/:challengeId' element={<ScoringPage/>}/>
-          <Route path="/result" element={<ResultPage />} />
+          <Route path="/result/:scoreId" element={<ResultPage />} />
 
           {/* Routes with the sidebar */}
           <Route element={<AppLayout />}>

@@ -108,7 +108,18 @@ function DashboardPage() {
             <Stack spacing={2}>
               {dashboardData.recentActivities.length > 0 ? (
                 dashboardData.recentActivities.map(activity => (
-                  <Paper key={activity.id} variant="outlined" sx={{ p: 1.5 }}>
+                  <Paper 
+                    key={activity.id} 
+                    variant="outlined" 
+                    sx={{ 
+                      p: 1.5, 
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: 'action.hover'
+                      }
+                    }}
+                    onClick={() => navigate(`/result/${activity.id}`)}
+                  >
                     <Typography variant="body1">「{activity.challengeName}」で</Typography>
                     <Typography variant="h5" component="p" sx={{ fontWeight: 'bold' }}>{activity.overall_score}点</Typography>
                     <Typography variant="caption" color="text.secondary">{activity.date}</Typography>
