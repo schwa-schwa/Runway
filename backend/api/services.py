@@ -13,7 +13,6 @@ class ScoringService:
         self._calculate_trunk_uprightness()###体幹の直立度
         self._calculate_gravity_stability()###重心の安定性
         self._calculate_rhythmic_accuracy()###リズムの正確さ
-        self._calculate_movement_smoothness()###動作の滑らかさ
         self.overall_score = round(sum(self.chart_data.values()), 3)
         
         self.feedback_text = self._generate_feedback()
@@ -50,7 +49,7 @@ class ScoringService:
             avg_y_diff = sum_of_y_diffs / valid_frames_count
             
             symmetry_score_100 = max(0, 100 - (avg_y_diff * 3000))
-            symmetry_score = symmetry_score_100 / 5.0
+            symmetry_score = symmetry_score_100 / 4.0
         else:
             symmetry_score = 0
         
@@ -108,7 +107,7 @@ class ScoringService:
         if valid_frames_count > 0:
             avg_tilt_angle = sum_of_angles / valid_frames_count
             score_100 = max(0, 100 - (avg_tilt_angle * (100 / 4)))
-            score = score_100 / 5.0
+            score = score_100 / 4.0
         else:
             score = 0
             
@@ -153,8 +152,8 @@ class ScoringService:
             stdev = statistics.stdev(hip_center_x_coords)
 
             
-            COEFFICIENT = 400 
-            score = max(0, 20 - (stdev * COEFFICIENT))
+            COEFFICIENT = 500 
+            score = max(0, 25 - (stdev * COEFFICIENT))
 
         self.chart_data['gravity_stability'] = round(score, 3)
   
@@ -205,17 +204,13 @@ class ScoringService:
             std_dev = math.sqrt(variance)
 
             score_100 = max(0, 100 - std_dev * 15)
-            score = score_100 / 5.0  
+            score = score_100 / 4.0  
         else:
             score = 0
 
         self.chart_data['rhythmic_accuracy'] = round(score, 3)
 
         
-    def _calculate_movement_smoothness(self):
-        self.chart_data['movement_smoothness'] = 16.0
-   
-    
     def _generate_feedback(self):
         return f"総合スコアは {self.overall_score}点です！"
     

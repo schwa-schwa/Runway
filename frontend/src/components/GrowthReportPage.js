@@ -30,6 +30,13 @@ import {
   Radar,
 } from "recharts";
 
+const itemLabels = {
+  symmetry: "左右対称性",
+  trunk_uprightness: "体幹の直立性",
+  gravity_stability: "重心の安定性",
+  rhythmic_accuracy: "リズムの正確性",
+};
+
 function GrowthReportPage() {
   const { currentUser } = useUser();
   const [challenges, setChallenges] = useState([]);
@@ -104,14 +111,6 @@ function GrowthReportPage() {
     )
       return [];
 
-    const itemLabels = {
-      symmetry: "左右対称性",
-      trunk_uprightness: "体幹の直立性",
-      gravity_stability: "重心の安定性",
-      rhythmic_accuracy: "リズムの正確性",
-      movement_smoothness: "動作の滑らかさ",
-    };
-
     const userAvgs = averageScores.user_chart_data_averages;
     const overallAvgs = averageScores.overall_chart_data_averages;
 
@@ -119,7 +118,7 @@ function GrowthReportPage() {
       subject: itemLabels[key],
       あなた: userAvgs[key] || 0,
       全体: overallAvgs[key] || 0,
-      fullMark: 20,
+      fullMark: 25,
     }));
   }, [averageScores]);
 
@@ -139,14 +138,6 @@ function GrowthReportPage() {
       attempts > 0
         ? scoreHistory[attempts - 1].score - scoreHistory[0].score
         : 0;
-
-    const itemLabels = {
-      symmetry: "左右対称性",
-      trunk_uprightness: "体幹の直立性",
-      gravity_stability: "重心の安定性",
-      rhythmic_accuracy: "リズムの正確性",
-      movement_smoothness: "動作の滑らかさ",
-    };
 
     const userAvgs = averageScores.user_chart_data_averages || {};
     let bestItem = "N/A";
@@ -307,7 +298,7 @@ function GrowthReportPage() {
                     >
                       <PolarGrid />
                       <PolarAngleAxis dataKey="subject" />
-                      <PolarRadiusAxis angle={30} domain={[0, 20]} />
+                      <PolarRadiusAxis angle={30} domain={[0, 25]} />
                       <Tooltip />
                       <Legend />
                       <Radar

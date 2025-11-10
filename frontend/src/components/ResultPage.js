@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Paper, Button, Chip, Divider, CircularProgress } from '@mui/material';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 // バックエンドの英語キーと、グラフに表示する日本語名を対応させるためのオブジェクト
 const subjectMapping = {
@@ -9,7 +9,6 @@ const subjectMapping = {
   "trunk_uprightness": "体幹の直立性",
   "gravity_stability": "重心の安定性",
   "rhythmic_accuracy": "リズムの正確性",
-  "movement_smoothness": "動作の滑らかさ"
 };
 
 function ResultPage() {
@@ -136,7 +135,7 @@ function ResultPage() {
   const chartDataForRecharts = Object.keys(resultData.chart_data).map(key => ({
     subject: subjectMapping[key] || key,
     score: resultData.chart_data[key],
-    fullMark: 20,
+    fullMark: 25,
   }));
 
   const paperStyle = {
@@ -189,6 +188,7 @@ function ResultPage() {
             <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartDataForRecharts}>
               <PolarGrid />
               <PolarAngleAxis dataKey="subject" stroke="#555" />
+              <PolarRadiusAxis domain={[0, 25]} />
               <Radar name="今回のスコア" dataKey="score" stroke="#FF8E53" fill="#FE6B8B" fillOpacity={0.7} />
             </RadarChart>
           </ResponsiveContainer>

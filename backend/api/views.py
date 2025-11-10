@@ -169,7 +169,6 @@ class ScoreAverageComparisonView(APIView):
             'trunk_uprightness',
             'gravity_stability',
             'rhythmic_accuracy',
-            'movement_smoothness'
         ]
         
         aggregations = {

@@ -82,7 +82,7 @@ function DashboardPage() {
   return (
     <>
       <Typography variant="h4" component="h1" sx={{ mb: 3 }}>
-        Welcome back, {dashboardData.userName}!
+        ようこそぉ！, {dashboardData.userName}!
       </Typography>
       
       <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
@@ -145,12 +145,12 @@ function DashboardPage() {
                 px: 8, py: 2,
                 borderRadius: '50px',
                 color: 'white',
-                background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
-                boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
+                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 '&:hover': {
                   transform: 'scale(1.05)',
-                  boxShadow: '0 6px 10px 4px rgba(255, 105, 135, .3)',
+                  boxShadow: '0 6px 10px 4px rgba(33, 203, 243, .5)',
                 }
               }}
               onClick={handleStartChallenge}
