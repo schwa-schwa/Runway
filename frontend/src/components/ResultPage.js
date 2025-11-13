@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Paper, Button, Chip, Divider, CircularProgress } from '@mui/material';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
+import { Box, Typography, Paper, Button, Chip, CircularProgress, Grid } from '@mui/material';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import { useTheme } from '@mui/material/styles';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 // バックエンドの英語キーと、グラフに表示する日本語名を対応させるためのオブジェクト
 const subjectMapping = {
@@ -11,9 +13,203 @@ const subjectMapping = {
   "rhythmic_accuracy": "リズムの正確性",
 };
 
+// --- サブコンポーネント定義 ---
+
+// 総合スコア表示コンポーネント
+const ScoreDisplay = ({ displayScore, isBestScore, rank, totalParticipants }) => {
+  const theme = useTheme();
+  return (
+    <Paper elevation={6} sx={{ p: 4, textAlign: 'center', borderRadius: '16px', bgcolor: 'white' }}>
+      <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center' }}>
+        <Typography
+          variant="h1"
+          component="p"
+          sx={{
+            fontSize: { xs: '4rem', sm: '6rem', md: '8rem' },
+            fontWeight: 'bold',
+            lineHeight: 1,
+            background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.info.light} 90%)`,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          {displayScore}
+        </Typography>
+        <Typography variant="h2" component="span" sx={{ color: theme.palette.primary.main, ml: 1, fontWeight: 'bold' }}>
+          点
+        </Typography>
+      </Box>
+      {isBestScore && (
+        <Chip
+          label="🎉 ベストスコア更新！"
+          sx={{
+            mt: 2,
+            fontWeight: 'bold',
+            fontSize: '1rem',
+            color: 'white',
+            background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.info.light} 90%)`,
+          }}
+        />
+      )}
+      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+        <Typography variant="h6" component="span" sx={{ color: theme.palette.grey[700] }}>
+          ランキング:
+        </Typography>
+        <Typography variant="h5" component="span" sx={{ fontWeight: 'bold', color: theme.palette.primary.dark }}>
+          {rank === null ? '...' : rank}
+        </Typography>
+        <Typography variant="h6" component="span" sx={{ color: theme.palette.grey[700] }}>
+          位 / {totalParticipants === null ? '...' : totalParticipants}人中
+        </Typography>
+      </Box>
+    </Paper>
+  );
+};
+
+// パフォーマンス分析コンポーネント
+const PerformanceAnalysis = ({ chartData }) => {
+  const theme = useTheme();
+  return (
+    <Box sx={{ width: { xs: '100%', md: '41.66%' } }}> {/* 5/12 */}
+      <Paper elevation={6} sx={{ p: 4, borderRadius: '16px', bgcolor: 'white', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="h5" component="h2" gutterBottom sx={{ textAlign: 'center', fontWeight: 'bold', color: theme.palette.grey[800] }}>
+          パフォーマンス分析
+        </Typography>
+        <Box sx={{ flexGrow: 1, minHeight: 300 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
+              <PolarGrid stroke={theme.palette.grey[300]} />
+              <PolarAngleAxis dataKey="subject" stroke={theme.palette.grey[700]} />
+              <PolarRadiusAxis domain={[0, 25]} angle={30} stroke={theme.palette.grey[500]} />
+              <Radar name="今回のスコア" dataKey="score" stroke={theme.palette.primary.main} fill={theme.palette.info.light} fillOpacity={0.6} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </Box>
+      </Paper>
+    </Box>
+  );
+};
+
+// AIコーチの視点コンポーネント
+const AiCoachView = ({ feedbackText }) => {
+  const theme = useTheme();
+  return (
+    <Box sx={{ width: { xs: '100%', md: '58.33%' } }}> {/* 7/12 */}
+      <Paper elevation={6} sx={{ p: 4, borderRadius: '16px', bgcolor: 'white', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+          <LightbulbIcon sx={{ color: theme.palette.primary.main, mr: 1 }} />
+          <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', color: theme.palette.grey[800] }}>
+            AIコーチの視点
+          </Typography>
+        </Box>
+        <Box sx={{
+          flexGrow: 1,
+          overflowY: 'auto',
+          mt: 2,
+          p: 2,
+          pl: 3,
+          borderLeft: `4px solid ${theme.palette.primary.main}`,
+          bgcolor: theme.palette.grey[50],
+          borderRadius: '0 8px 8px 0',
+        }}>
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, color: theme.palette.grey[800] }}>
+            {feedbackText}
+          </Typography>
+        </Box>
+      </Paper>
+    </Box>
+  );
+};
+
+// スコア履歴チャートコンポーネント
+const ScoreHistoryChart = ({ historyData }) => {
+  const theme = useTheme();
+  return (
+    <Paper elevation={6} sx={{ p: 3, borderRadius: '16px', bgcolor: 'white' }}>
+      <Typography variant="h5" component="h2" gutterBottom sx={{ textAlign: 'center', fontWeight: 'bold', color: theme.palette.grey[800] }}>
+        このチャレンジのスコア推移
+      </Typography>
+      <Box sx={{ height: 300, mt: 2 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            data={historyData}
+            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.grey[300]} />
+            <XAxis dataKey="date" stroke={theme.palette.grey[700]} />
+            <YAxis domain={[0, 100]} stroke={theme.palette.grey[700]} />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="overall_score" stroke={theme.palette.primary.main} activeDot={{ r: 8 }} name="スコア" />
+          </LineChart>
+        </ResponsiveContainer>
+      </Box>
+    </Paper>
+  );
+};
+
+// アクションボタンコンポーネント
+const ActionButtons = ({ onNavigate }) => {
+  const theme = useTheme();
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 3 }}>
+      <Button
+        variant="contained"
+        size="large"
+        sx={{
+          bgcolor: theme.palette.primary.main,
+          '&:hover': { bgcolor: theme.palette.primary.dark },
+          color: 'white',
+          fontWeight: 'bold',
+          px: 4,
+          py: 1.5,
+          borderRadius: '25px',
+        }}
+        onClick={() => onNavigate(`/challenges`)}
+      >
+        もう一度挑戦する
+      </Button>
+      <Button
+        variant="outlined"
+        size="large"
+        sx={{
+          color: theme.palette.primary.main,
+          borderColor: theme.palette.primary.main,
+          '&:hover': { borderColor: theme.palette.primary.dark, color: theme.palette.primary.dark },
+          fontWeight: 'bold',
+          px: 4,
+          py: 1.5,
+          borderRadius: '25px',
+        }}
+        onClick={() => onNavigate('/dashboard')}
+      >
+        ダッシュボードに戻る
+      </Button>
+      <Button
+        variant="text"
+        size="large"
+        sx={{
+          color: theme.palette.info.main,
+          '&:hover': { color: theme.palette.info.dark },
+          fontWeight: 'bold',
+          px: 4,
+          py: 1.5,
+          borderRadius: '25px',
+        }}
+        onClick={() => onNavigate('/report')}
+      >
+        詳細な成長レポートを見る
+      </Button>
+    </Box>
+  );
+};
+
+
+// --- メインコンポーネント ---
 function ResultPage() {
   const navigate = useNavigate();
   const { scoreId } = useParams(); // URLからscoreIdを取得
+  const theme = useTheme(); // テーマフックを呼び出す
 
   // --- State管理 ---
   const [resultData, setResultData] = useState(null);
@@ -21,10 +217,10 @@ function ResultPage() {
   const [error, setError] = useState(null);
 
   const [displayScore, setDisplayScore] = useState(0);
-  const [personalBest, setPersonalBest] = useState(null);
   const [isBestScore, setIsBestScore] = useState(false);
   const [rank, setRank] = useState(null);
   const [totalParticipants, setTotalParticipants] = useState(null);
+  const [scoreHistoryForChart, setScoreHistoryForChart] = useState([]); // スコア履歴チャート用
 
   // --- データ取得ロジック ---
   useEffect(() => {
@@ -62,15 +258,22 @@ function ResultPage() {
         ]);
         
         // --- 自己ベストを計算 ---
-        // 今回のスコアを除いた過去のスコアリストを作成
         const scoreHistory = pastScores.filter(score => score.id !== mainScoreData.id);
         const bestPastScore = scoreHistory.reduce((max, score) => Math.max(max, score.overall_score), 0);
-        setPersonalBest(bestPastScore);
         setIsBestScore(mainScoreData.overall_score > bestPastScore);
 
         // --- ランキング情報をセット ---
         setRank(rankingData.rank);
         setTotalParticipants(rankingData.total_participants);
+
+        // --- スコア履歴チャート用データを整形 ---
+        const formattedScoreHistory = pastScores
+          .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+          .map((score) => ({
+            overall_score: score.overall_score,
+            date: new Date(score.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }),
+          }));
+        setScoreHistoryForChart(formattedScoreHistory);
 
       } catch (err) {
         console.error(err);
@@ -109,9 +312,9 @@ function ResultPage() {
   // --- ローディング・エラー表示 ---
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
         <CircularProgress />
-        <Typography sx={{ ml: 2 }}>結果を読み込み中...</Typography>
+        <Typography sx={{ mt: 2 }}>結果を読み込み中...</Typography>
       </Box>
     );
   }
@@ -138,119 +341,43 @@ function ResultPage() {
     fullMark: 25,
   }));
 
-  const paperStyle = {
-    flex: '1 1 50%',
-    minWidth: 0,
-    p: 3,
-    borderRadius: '16px',
-    border: '1px solid rgba(255, 255, 255, 0.4)',
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-    backdropFilter: 'blur(10px)',
-    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.2)',
-  };
-
   return (
     <Box sx={{
+      minHeight: '100vh',
+      background: theme.palette.grey[100],
+      py: 4,
+      px: { xs: 2, md: 4 },
       display: 'flex',
       flexDirection: 'column',
-      height: '100vh',
-      p: 3,
       gap: 3,
       boxSizing: 'border-box',
-      background: 'linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%)',
     }}>
-      {/* ... JSX部分は変更なし ... */}
-      <Box sx={{ display: 'flex', flex: 1, gap: 3, minHeight: 0 }}>
-        <Paper elevation={6} sx={{ ...paperStyle, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
-            <Typography
-              variant="h1"
-              component="p"
-              sx={{
-                fontSize: '10vw',
-                fontWeight: 'bold',
-                lineHeight: 1,
-                background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              {displayScore}
-            </Typography>
-            <Typography variant="h2" component="span" sx={{ color: '#FE6B8B', ml: 1, fontWeight: 'bold' }}>
-              点
-            </Typography>
-          </Box>
-        </Paper>
+      <Typography variant="h4" component="h1" sx={{ mb: 3, textAlign: 'center', fontWeight: 'bold', color: theme.palette.grey[800] }}>
+        採点結果
+      </Typography>
 
-        <Paper elevation={6} sx={{ ...paperStyle }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartDataForRecharts}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="subject" stroke="#555" />
-              <PolarRadiusAxis domain={[0, 25]} />
-              <Radar name="今回のスコア" dataKey="score" stroke="#FF8E53" fill="#FE6B8B" fillOpacity={0.7} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </Paper>
+      <ScoreDisplay
+        displayScore={displayScore}
+        isBestScore={isBestScore}
+        rank={rank}
+        totalParticipants={totalParticipants}
+      />
+      
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: 3,
+          mb: 3,
+        }}
+      >
+        <PerformanceAnalysis chartData={chartDataForRecharts} />
+        <AiCoachView feedbackText={resultData.feedback_text} />
       </Box>
 
-      <Box sx={{ display: 'flex', flex: 1, gap: 3, minHeight: 0 }}>
-        <Paper elevation={6} sx={{ ...paperStyle, display: 'flex', flexDirection: 'column', justifyContent: 'space-around', textAlign: 'center' }}>
-          <Box sx={{ flexShrink: 1 }}>
-            <Typography component="h2" gutterBottom sx={{ fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', fontWeight: 500 }}>
-              自己ベスト比較
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: { xs: 2, sm: 4 }, mt: 2 }}>
-              <Box>
-                <Typography variant="caption" display="block" color="text.secondary">今回</Typography>
-                <Typography component="p" sx={{ fontWeight: 'bold', color: isBestScore ? '#FF8E53' : '#FE6B8B', fontSize: 'clamp(2rem, 6vw, 3.75rem)', lineHeight: 1.2 }}>
-                  {resultData.overall_score}
-                </Typography>
-              </Box>
-              <Typography color="text.secondary" sx={{ fontSize: 'clamp(1.5rem, 4vw, 2.125rem)' }}>vs</Typography>
-              <Box>
-                <Typography variant="caption" display="block" color="text.secondary">自己ベスト</Typography>
-                <Typography component="p" sx={{ fontWeight: 'bold', fontSize: 'clamp(2rem, 6vw, 3.75rem)', lineHeight: 1.2 }}>
-                  {personalBest === null ? '...' : personalBest}
-                </Typography>
-              </Box>
-            </Box>
-            {isBestScore && (
-              <Chip label="🎉 ベストスコア更新！" sx={{ mt: 2, fontWeight: 'bold', fontSize: '1rem', color: 'white', background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)' }} />
-            )}
-          </Box>
-          <Divider sx={{ my: 2 }} />
-          <Box sx={{ flexShrink: 1 }}>
-            <Typography component="h2" gutterBottom sx={{ fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', fontWeight: 500 }}>
-              ランキング
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center' }}>
-              <Typography component="p" sx={{ fontWeight: 'bold', fontSize: 'clamp(2rem, 6vw, 3.75rem)', lineHeight: 1.2 }}>
-                {rank === null ? '...' : rank}
-              </Typography>
-              <Typography component="span" sx={{ color: 'text.secondary', fontWeight: 'bold', fontSize: 'clamp(1rem, 3vw, 1.5rem)', ml: 1 }}>
-                位
-              </Typography>
-              <Typography component="span" sx={{ color: 'text.secondary', fontSize: 'clamp(0.8rem, 2vw, 1rem)', ml: 1.5 }}>
-                / {totalParticipants === null ? '...' : totalParticipants}人中
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
+      <ScoreHistoryChart historyData={scoreHistoryForChart} />
 
-        <Paper elevation={6} sx={{ ...paperStyle, display: 'flex', flexDirection: 'column' }}>
-          <Typography variant="h5" component="h2" gutterBottom>AIからのアドバイス</Typography>
-          <Box sx={{ flexGrow: 1, overflowY: 'auto', mt: 1, p: 2, background: 'rgba(255, 255, 255, 0.5)', borderRadius: '8px' }}>
-            <Typography variant="h4" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, textAlign: 'left' }}>
-              {resultData.feedback_text}
-            </Typography>
-          </Box>
-          <Button variant="contained" size="large" sx={{ mt: 3, flexShrink: 0, background: 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)', color: 'white', fontWeight: 'bold' }} onClick={() => navigate('/')}>
-            最初の画面に戻る
-          </Button>
-        </Paper>
-      </Box>
+      <ActionButtons onNavigate={navigate} />
     </Box>
   );
 }
