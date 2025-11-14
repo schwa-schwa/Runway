@@ -12,6 +12,7 @@ import {
 import { useUser } from '../contexts/UserContext';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
+import { LineChart, Line, Tooltip, ResponsiveContainer } from 'recharts';
 
 
 function DashboardPage() {
@@ -79,6 +80,15 @@ function DashboardPage() {
     );
   }
 
+  // Create a 5-element array for display, padding with nulls
+  const activities = dashboardData.recentActivities || [];
+  const displayActivities = Array(5).fill(null).map((_, i) => activities[i] || null);
+
+  // Prepare data for the mini chart, showing oldest to newest
+  const chartData = (activities || [])
+    .map(activity => ({ name: activity.date, score: activity.overall_score }))
+    .reverse();
+
   return (
     <>
       <Typography variant="h4" component="h1" sx={{ mb: 3 }}>
@@ -104,10 +114,30 @@ function DashboardPage() {
 
             <Divider sx={{ my: 2 }} />
 
+            {chartData.length > 1 && (
+              <>
+                <Typography variant="h6" gutterBottom>最近のスコア推移</Typography>
+                <Box sx={{ height: 100, mb: 2 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', border: 'none', borderRadius: '8px' }}
+                        labelStyle={{ color: 'white', fontWeight: 'bold' }}
+                        itemStyle={{ color: '#8884d8' }}
+                        formatter={(value) => [`${value}点`, 'スコア']}
+                      />
+                      <Line type="monotone" dataKey="score" stroke="#8884d8" strokeWidth={2} dot={{ r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </Box>
+                <Divider sx={{ my: 2 }} />
+              </>
+            )}
+
             <Typography variant="h6" gutterBottom>最近のアクティビティ</Typography>
             <Stack spacing={2}>
-              {dashboardData.recentActivities.length > 0 ? (
-                dashboardData.recentActivities.map(activity => (
+              {displayActivities.map((activity, index) =>
+                activity ? (
                   <Paper 
                     key={activity.id} 
                     variant="outlined" 
@@ -124,39 +154,98 @@ function DashboardPage() {
                     <Typography variant="h5" component="p" sx={{ fontWeight: 'bold' }}>{activity.overall_score}点</Typography>
                     <Typography variant="caption" color="text.secondary">{activity.date}</Typography>
                   </Paper>
-                ))
-              ) : (
-                <Typography variant="body2" color="text.secondary">まだアクティビティがありません。</Typography>
+                ) : (
+                  // If this is the first placeholder AND there are no activities, show a message.
+                  (index === 0 && activities.length === 0) ? (
+                    <Paper 
+                      key="no-activity-message"
+                      variant="outlined"
+                      sx={{
+                        p: 1.5,
+                        textAlign: 'center',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '91.5px',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <Typography variant="body2" color="primary.main">
+                        まだチャレンジ履歴がありません。
+                        <br />
+                        最初のチャレンジを始めましょう！
+                      </Typography>
+                    </Paper>
+                  ) : (
+                    // Otherwise, render the invisible placeholder to keep the space.
+                    <Paper
+                      key={`placeholder-${index}`}
+                      elevation={0}
+                      sx={{ p: 1.5, backgroundColor: 'transparent' }}
+                    >
+                      <Typography variant="body1" sx={{ visibility: 'hidden' }}>-</Typography>
+                      <Typography variant="h5" component="p" sx={{ fontWeight: 'bold', visibility: 'hidden' }}>-</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ visibility: 'hidden' }}>-</Typography>
+                    </Paper>
+                  )
+                )
               )}
             </Stack>
           </Paper>
         </Box>
 
         <Box sx={{ width: { xs: '100%', md: '66.67%' }, display: 'flex', alignItems: 'stretch' }}>
-          <Paper elevation={3} sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-            <Typography variant="h5" gutterBottom>準備はいいですか？</Typography>
-            <Button 
-              variant="contained" 
-              size="large"
-              sx={{
-                mt: 2,
-                fontSize: '1.5rem',
-                fontWeight: 'bold',
-                px: 8, py: 2,
-                borderRadius: '50px',
-                color: 'white',
-                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'scale(1.05)',
-                  boxShadow: '0 6px 10px 4px rgba(33, 203, 243, .5)',
-                }
-              }}
-              onClick={handleStartChallenge}
-            >
-              新しいチャレンジを始める
-            </Button>
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: 4, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              width: '100%',
+              position: 'relative',
+              overflow: 'hidden',
+              color: 'white',
+              backgroundImage: 'url(https://images.pexels.com/photos/1149923/pexels-photo-1149923.jpeg)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          >
+            <Box sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              zIndex: 1,
+            }} />
+            <Box sx={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
+              <Typography variant="h5" gutterBottom>準備はいいですか？</Typography>
+              <Button 
+                variant="contained" 
+                size="large"
+                sx={{
+                  mt: 2,
+                  fontSize: '1.5rem',
+                  fontWeight: 'bold',
+                  px: 8, py: 2,
+                  borderRadius: '50px',
+                  color: 'white',
+                  background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                  boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': {
+                    transform: 'scale(1.05)',
+                    boxShadow: '0 6px 10px 4px rgba(33, 203, 243, .5)',
+                  }
+                }}
+                onClick={handleStartChallenge}
+              >
+                新しいチャレンジを始める
+              </Button>
+            </Box>
           </Paper>
         </Box>
       </Box>

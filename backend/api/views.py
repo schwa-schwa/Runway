@@ -254,7 +254,7 @@ class DashboardAPIView(APIView):
                         break # 連続が途切れたら終了
 
         # 4. 最近のアクティビティ (N+1問題を回避)
-        recent_activities_query = scores.select_related('challenge')[:3]
+        recent_activities_query = scores.select_related('challenge')[:5]
         recent_activities = [
             {
                 "id": score.id,
@@ -272,6 +272,68 @@ class DashboardAPIView(APIView):
             "highScore": high_score,
             "streak": streak,
             "recentActivities": recent_activities
+        }
+
+        return Response(response_data)
+
+
+class ResultPageDataView(APIView):
+    """
+    リザルトページに必要なすべてのデータを集約して返すAPIビュー。
+    GET /api/result/<score_id>/
+    """
+    def get(self, request, pk=None, *args, **kwargs):
+        try:
+            # 1. メインとなるスコアを取得
+            main_score = Score.objects.select_related('user', 'challenge').get(pk=pk)
+        except Score.DoesNotExist:
+            return Response({"error": "Score not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # メインスコアのシリアライズ
+        serialized_main_score = ScoreSerializer(main_score, context={'request': request}).data
+
+        # 2. 関連スコア（同じユーザー、同じチャレンジ）をすべて取得
+        related_scores = Score.objects.filter(
+            user=main_score.user,
+            challenge=main_score.challenge
+        ).order_by('created_at')
+
+        # 3. スコア履歴を作成
+        score_history = [
+            {
+                "overall_score": score.overall_score,
+                "date": score.created_at.strftime('%m/%d') # 日付フォーマットをMM/DDに
+            }
+            for score in related_scores
+        ]
+
+        # 4. 自己ベストを計算 (今回のスコアを除く)
+        past_scores = related_scores.exclude(pk=pk)
+        personal_best_score = past_scores.aggregate(max_score=Max('overall_score'))['max_score'] or 0
+
+        # 5. ランキングを計算
+        leaderboard = Score.objects.filter(challenge=main_score.challenge)\
+            .values('user')\
+            .annotate(max_score=Max('overall_score'))\
+            .order_by('-max_score')
+
+        my_rank = 0
+        for i, entry in enumerate(leaderboard):
+            if entry['user'] == main_score.user_id:
+                my_rank = i + 1
+                break
+        
+        total_participants = leaderboard.count()
+
+        # 6. すべてのデータを結合してレスポンス
+        response_data = {
+            "main_score": serialized_main_score,
+            "score_history": score_history,
+            "personal_best": personal_best_score,
+            "ranking": {
+                "rank": my_rank,
+                "total_participants": total_participants
+            }
         }
 
         return Response(response_data)

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Paper, Button, Chip, CircularProgress, Grid } from '@mui/material';
+import { Box, Typography, Paper, Button, Chip, CircularProgress, } from '@mui/material';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import { useTheme } from '@mui/material/styles';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
@@ -234,46 +234,19 @@ function ResultPage() {
       try {
         setLoading(true);
 
-        // 1. まずはメインのスコアデータをIDで取得
-        const scoreResponse = await fetch(`http://localhost:8000/api/scores/${scoreId}/`);
-        if (!scoreResponse.ok) {
-          throw new Error(`スコア(ID: ${scoreId})の取得に失敗しました。`);
+        // 新しい単一のエンドポイントにリクエスト
+        const response = await fetch(`http://localhost:8000/api/result/${scoreId}/`);
+        if (!response.ok) {
+          throw new Error(`結果データの取得に失敗しました。(ID: ${scoreId})`);
         }
-        const mainScoreData = await scoreResponse.json();
-        setResultData(mainScoreData);
+        const data = await response.json();
 
-        // 2. 関連データを並行して取得
-        const [scoresResponse, rankingResponse] = await Promise.all([
-          fetch(`http://localhost:8000/api/scores/?user=${mainScoreData.user}&challenge=${mainScoreData.challenge}`),
-          fetch(`http://localhost:8000/api/scores/${scoreId}/ranking/`)
-        ]);
-
-        if (!scoresResponse.ok || !rankingResponse.ok) {
-          throw new Error('関連データの取得に失敗しました。');
-        }
-
-        const [pastScores, rankingData] = await Promise.all([
-          scoresResponse.json(),
-          rankingResponse.json()
-        ]);
-        
-        // --- 自己ベストを計算 ---
-        const scoreHistory = pastScores.filter(score => score.id !== mainScoreData.id);
-        const bestPastScore = scoreHistory.reduce((max, score) => Math.max(max, score.overall_score), 0);
-        setIsBestScore(mainScoreData.overall_score > bestPastScore);
-
-        // --- ランキング情報をセット ---
-        setRank(rankingData.rank);
-        setTotalParticipants(rankingData.total_participants);
-
-        // --- スコア履歴チャート用データを整形 ---
-        const formattedScoreHistory = pastScores
-          .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-          .map((score) => ({
-            overall_score: score.overall_score,
-            date: new Date(score.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }),
-          }));
-        setScoreHistoryForChart(formattedScoreHistory);
+        // APIからのレスポンスを元に各stateを更新
+        setResultData(data.main_score);
+        setIsBestScore(data.main_score.overall_score > data.personal_best);
+        setRank(data.ranking.rank);
+        setTotalParticipants(data.ranking.total_participants);
+        setScoreHistoryForChart(data.score_history);
 
       } catch (err) {
         console.error(err);

@@ -8,7 +8,8 @@ from .views import (
     RankingAPIView,
     ScoreHistoryView,
     ScoreAverageComparisonView,
-    DashboardAPIView
+    DashboardAPIView,
+    ResultPageDataView
 )
 
 router = DefaultRouter()
@@ -24,6 +25,7 @@ urlpatterns = [
     path('ranking/', RankingAPIView.as_view(), name='ranking-list'),
     path('scores/history/', ScoreHistoryView.as_view(), name='score-history'),
     path('scores/average_comparison/', ScoreAverageComparisonView.as_view(), name='score-average-comparison'),
+    path('result/<int:pk>/', ResultPageDataView.as_view(), name='result-page-data'),
     
     # routerが生成するURLを後に記述
     path('', include(router.urls)),
