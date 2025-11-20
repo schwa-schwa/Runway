@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Paper, Button, Chip, CircularProgress, } from '@mui/material';
+import { Box, Typography, Paper, Button, Chip, CircularProgress, Grid, Tooltip as MuiTooltip } from '@mui/material';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useTheme } from '@mui/material/styles';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
@@ -11,6 +12,11 @@ const subjectMapping = {
   "trunk_uprightness": "体幹の直立性",
   "gravity_stability": "重心の安定性",
   "rhythmic_accuracy": "リズムの正確性",
+};
+
+const partMapping = {
+  "shoulders": "肩",
+  "hips": "腰",
 };
 
 // --- サブコンポーネント定義 ---
@@ -120,6 +126,61 @@ const AiCoachView = ({ feedbackText }) => {
     </Box>
   );
 };
+
+// 詳細対称性レポートコンポーネント (新規追加)
+const DetailedSymmetryReport = ({ symmetryData }) => {
+  const theme = useTheme();
+
+  if (!symmetryData) return null;
+
+  const renderTiltDirection = (tilt) => {
+    if (Math.abs(tilt) < 0.005) { // 0.5%未満の傾きはほぼ無しとみなす
+      return "ほぼ均等";
+    }
+    const direction = tilt < 0 ? "左" : "右";
+    const percentage = Math.abs(tilt * 100).toFixed(1);
+    return `${direction}側が約${percentage}%高い傾向`;
+  };
+
+  return (
+    <Paper elevation={6} sx={{ p: 3, borderRadius: '16px', bgcolor: 'white' }}>
+      <Typography variant="h5" component="h2" gutterBottom sx={{ textAlign: 'center', fontWeight: 'bold', color: theme.palette.grey[800] }}>
+        詳細分析：左右の対称性
+      </Typography>
+      <Grid container spacing={3} sx={{ mt: 1 }}>
+        {Object.entries(symmetryData).map(([part, data]) => (
+          <Grid item xs={12} md={6} key={part}>
+            <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%' }}>
+              <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', color: theme.palette.primary.dark }}>
+                {partMapping[part] || part}の対称性
+              </Typography>
+              <Box sx={{ textAlign: 'center', my: 2 }}>
+                <Typography variant="h4" component="p" sx={{ fontWeight: 'bold', color: theme.palette.secondary.main }}>
+                  {data.score} <span style={{ fontSize: '1rem' }}>/ 25点</span>
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <MuiTooltip title="歩行中の左右のブレの大きさ。体幹の長さに対する相対的な割合で、0に近いほど安定しています。">
+                    <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
+                  </MuiTooltip>
+                  安定性 (ブレの大きさ): <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{data.avg_deviation}</Typography>
+                </Typography>
+                <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <MuiTooltip title="左右どちらに体が傾いているかの癖。-は左、+は右が高い傾向を示します。">
+                    <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
+                  </MuiTooltip>
+                  傾きの癖: <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{renderTiltDirection(data.avg_tilt_direction)}</Typography>
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+    </Paper>
+  );
+};
+
 
 // スコア履歴チャートコンポーネント
 const ScoreHistoryChart = ({ historyData }) => {
@@ -314,6 +375,8 @@ function ResultPage() {
     fullMark: 25,
   }));
 
+  const symmetryData = resultData.detailed_results?.symmetry;
+
   return (
     <Box sx={{
       minHeight: '100vh',
@@ -347,6 +410,8 @@ function ResultPage() {
         <PerformanceAnalysis chartData={chartDataForRecharts} />
         <AiCoachView feedbackText={resultData.feedback_text} />
       </Box>
+
+      {symmetryData && <DetailedSymmetryReport symmetryData={symmetryData} />}
 
       <ScoreHistoryChart historyData={scoreHistoryForChart} />
 

@@ -1,11 +1,109 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Typography, Box, CircularProgress, Button, LinearProgress, Paper, IconButton, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import { Typography, Box, CircularProgress, Button, LinearProgress, Paper, IconButton, ToggleButtonGroup, ToggleButton, Tooltip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { PoseLandmarker, FilesetResolver, DrawingUtils } from '@mediapipe/tasks-vision';
 import { useUser } from '../contexts/UserContext';
 
 const SCORING_DURATION = 5000; // 採点時間（ミリ秒）
+
+// --- Metric Definitions ---
+const METRIC_DEFINITIONS = {
+  trunkAngle: {
+    name: "体幹の傾き",
+    unit: "°",
+    calculation: (landmarks) => {
+      const [LEFT_SHOULDER, RIGHT_SHOULDER, LEFT_HIP, RIGHT_HIP] = [11, 12, 23, 24];
+      const VISIBILITY_THRESHOLD = 0.85;
+      const requiredLandmarks = [landmarks[LEFT_SHOULDER], landmarks[RIGHT_SHOULDER], landmarks[LEFT_HIP], landmarks[RIGHT_HIP]];
+      if (requiredLandmarks.some(lm => !lm || lm.visibility < VISIBILITY_THRESHOLD)) return null;
+
+      const shoulderMidX = (landmarks[LEFT_SHOULDER].x + landmarks[RIGHT_SHOULDER].x) / 2;
+      const shoulderMidY = (landmarks[LEFT_SHOULDER].y + landmarks[RIGHT_SHOULDER].y) / 2;
+      const hipMidX = (landmarks[LEFT_HIP].x + landmarks[RIGHT_HIP].x) / 2;
+      const hipMidY = (landmarks[LEFT_HIP].y + landmarks[RIGHT_HIP].y) / 2;
+
+      const bodyVecY = shoulderMidY - hipMidY;
+      const bodyVecX = shoulderMidX - hipMidX;
+      
+      const bodyAngleRad = Math.atan2(bodyVecY, bodyVecX);
+      const bodyAngleDeg = bodyAngleRad * (180 / Math.PI);
+      
+      let signedTiltAngle = bodyAngleDeg - (-90);
+
+      // 角度を-180から180度の範囲に正規化
+      while (signedTiltAngle > 180) signedTiltAngle -= 360;
+      // while (signedTiltAngle < -180) signedTiltAngle += 360; // この行は不要
+      
+      return signedTiltAngle;
+    }
+  },
+  //将来的にここに新しい指標（例: kneeAngle）を追加できる
+};
+
+const calculateAllRealtimeMetrics = (landmarks) => {
+  const metrics = {};
+  for (const key in METRIC_DEFINITIONS) {
+    const value = METRIC_DEFINITIONS[key].calculation(landmarks);
+    if (value !== null) {
+      metrics[key] = value;
+    }
+  }
+  return metrics;
+};
+
+// --- UI Components ---
+
+const RealtimeMetricsDisplay = ({ metrics, visibility }) => {
+  return (
+    <Box sx={{
+      position: 'absolute',
+      top: 16,
+      left: 16,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      color: 'white',
+      p: 1,
+      borderRadius: 2,
+      zIndex: 10,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 0.5
+    }}>
+      {Object.keys(METRIC_DEFINITIONS).map(key => (
+        visibility[key] && metrics[key] !== undefined && (
+          <Typography key={key} variant="h6" component="p" sx={{ fontWeight: 'bold' }}>
+            {METRIC_DEFINITIONS[key].name}: {metrics[key].toFixed(1)}{METRIC_DEFINITIONS[key].unit}
+          </Typography>
+        )
+      ))}
+    </Box>
+  );
+};
+
+const MetricsVisibilityControl = ({ visibility, setVisibility }) => {
+  const handleVisibilityChange = (key) => {
+    setVisibility(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  return (
+    <ToggleButtonGroup size="small" aria-label="metric visibility controls">
+      {Object.keys(METRIC_DEFINITIONS).map(key => (
+        <Tooltip key={key} title={`${METRIC_DEFINITIONS[key].name} 表示ON/OFF`}>
+          <ToggleButton
+            value={key}
+            selected={visibility[key]}
+            onChange={() => handleVisibilityChange(key)}
+          >
+            {visibility[key] ? <VisibilityIcon /> : <VisibilityOffIcon />}
+          </ToggleButton>
+        </Tooltip>
+      ))}
+    </ToggleButtonGroup>
+  );
+};
+
 
 function ScoringPage() {
   const navigate = useNavigate();
@@ -19,7 +117,12 @@ function ScoringPage() {
   const [scoringMode, setScoringMode] = useState('time'); // 'time' or 'manual'
   const [recordedLandmarks, setRecordedLandmarks] = useState([]);
   const [message, setMessage] = useState('');
-  const [progress, setProgress] = useState(0); // プログレスバー用のstate
+  const [progress, setProgress] = useState(0);
+  
+  const [realtimeMetrics, setRealtimeMetrics] = useState({});
+  const [metricsVisibility, setMetricsVisibility] = useState(
+    Object.keys(METRIC_DEFINITIONS).reduce((acc, key) => ({ ...acc, [key]: true }), {})
+  );
 
   const streamRef = useRef(null);
   const videoRef = useRef(null);
@@ -182,18 +285,23 @@ function ScoringPage() {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           const results = poseLandmarker.detectForVideo(video, performance.now());
-          if (scoringStatusRef.current === 'scoring') {
-            setRecordedLandmarks(prev => [...prev, results.landmarks]);
-          }
-          canvasCtx.save();
-          canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-          if (results.landmarks) {
-            for (const landmark of results.landmarks) {
-              drawingUtils.drawLandmarks(landmark, { radius: 5, color: '#FF0000' });
-              drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS, { color: '#FFFFFF' });
+          
+          if (results.landmarks && results.landmarks.length > 0) {
+            const landmarks = results.landmarks[0];
+            
+            const metrics = calculateAllRealtimeMetrics(landmarks);
+            setRealtimeMetrics(metrics);
+            
+            if (scoringStatusRef.current === 'scoring') {
+              setRecordedLandmarks(prev => [...prev, results.landmarks]);
             }
+
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+            drawingUtils.drawLandmarks(landmarks, { radius: 5, color: '#03A9F4' });
+            drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: '#FFFFFF' });
+            canvasCtx.restore();
           }
-          canvasCtx.restore();
         }
         requestRef.current = requestAnimationFrame(predictWebcam);
       };
@@ -238,12 +346,11 @@ function ScoringPage() {
     );
   }
 
-  // カウントダウン中と終了後にメッセージをオーバーレイ表示
   const showOverlay = scoringStatus === 'countdown' || (scoringStatus === 'finished' && message === 'FINISH');
 
   return (
     <Box sx={{
-      position: 'relative', // For positioning the cancel button
+      position: 'relative',
       flexGrow: 1,
       p: 3,
       background: '#f4f6f8',
@@ -260,7 +367,7 @@ function ScoringPage() {
           position: 'absolute',
           top: 24,
           right: 24,
-          zIndex: 20, // Ensure it's above other elements
+          zIndex: 20,
           backgroundColor: 'rgba(0, 0, 0, 0.3)',
           '&:hover': {
             backgroundColor: 'rgba(0, 0, 0, 0.5)'
@@ -293,6 +400,7 @@ function ScoringPage() {
       <Paper elevation={3} sx={{ width: '100%', maxWidth: '960px', overflow: 'hidden' }}>
         {scoringStatus === 'scoring' && scoringMode === 'time' && <LinearProgress variant="determinate" value={progress} />}
         <Box sx={{ position: 'relative' }}>
+          <RealtimeMetricsDisplay metrics={realtimeMetrics} visibility={metricsVisibility} />
           <video 
             ref={videoRef}
             playsInline 
@@ -309,7 +417,7 @@ function ScoringPage() {
 
       <Box sx={{ my: 2, height: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2}}>
         {scoringStatus === 'idle' && (
-          <>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
             <ToggleButtonGroup
               color="primary"
               value={scoringMode}
@@ -320,10 +428,11 @@ function ScoringPage() {
               <ToggleButton value="time">時間制</ToggleButton>
               <ToggleButton value="manual">手動</ToggleButton>
             </ToggleButtonGroup>
+            <MetricsVisibilityControl visibility={metricsVisibility} setVisibility={setMetricsVisibility} />
             <Button variant='contained' size='large' onClick={handleStartScoring}>
               採点開始
             </Button>
-          </>
+          </Box>
         )}
         {scoringStatus === 'scoring' && scoringMode === 'manual' && (
           <Button variant='contained' size='large' color='error' onClick={handleStopScoring}>

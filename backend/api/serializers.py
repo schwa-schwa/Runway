@@ -31,11 +31,13 @@ class ScoreSerializer(serializers.ModelSerializer):
             'feedback_text',
             'chart_data',
             'raw_landmarks',
+            'detailed_results',
             'created_at',
         ]
         read_only_fields = [
             'overall_score',
             'feedback_text',
             'chart_data',
+            'detailed_results',
             'created_at',
         ]
