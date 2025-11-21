@@ -7,6 +7,24 @@ import reportWebVitals from './reportWebVitals';
 
 // アプリケーション全体のテーマを定義
 const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#4CAF50', // Fresh Green
+      light: '#81C784',
+      dark: '#388E3C',
+      contrastText: '#fff',
+    },
+    secondary: {
+      main: '#8BC34A', // Light Green
+      light: '#AED581',
+      dark: '#689F38',
+      contrastText: '#fff',
+    },
+    background: {
+      default: '#F1F8E9', // Very light green background
+      paper: '#ffffff',
+    },
+  },
   typography: {
     fontFamily: [
       '"Noto Sans JP"', // メインのフォント

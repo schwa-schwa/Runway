@@ -7,12 +7,14 @@ import {
     Paper, 
     Stack, 
     Divider, 
-    CircularProgress 
+    CircularProgress,
+    Grid
 } from '@mui/material';
 import { useUser } from '../contexts/UserContext';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
-import { LineChart, Line, Tooltip, ResponsiveContainer } from 'recharts';
+import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
 
 
 function DashboardPage() {
@@ -97,62 +99,107 @@ function DashboardPage() {
       
       <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
         <Box sx={{ width: { xs: '100%', md: '33.33%' } }}>
-          <Paper elevation={3} sx={{ p: 2 }}>
+          <Paper elevation={3} sx={{ p: 2, borderRadius: '16px' }}>
             <Typography variant="h6" gutterBottom>ステータス</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h4" sx={{ mr: 1 }}>Lv.</Typography>
-              <Typography variant="h2">{dashboardData.level}</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <EmojiEventsIcon sx={{ color: '#ffeb3b', mr: 1 }} />
-              <Typography>ハイスコア: {dashboardData.highScore}</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <LocalFireDepartmentIcon sx={{ color: '#f44336', mr: 1 }} />
-              <Typography>連続プレイ: {dashboardData.streak} 日</Typography>
-            </Box>
+            <Stack spacing={2} sx={{ mb: 3 }}>
+              <Paper elevation={0} variant="outlined" sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '24px' }}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold' }}>現在のレベル</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>{dashboardData.level}</Typography>
+                </Box>
+                <Box sx={{ p: 1, borderRadius: '50%', bgcolor: 'primary.light', color: 'white', display: 'flex' }}>
+                  <Typography variant="h6" sx={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Lv</Typography>
+                </Box>
+              </Paper>
+
+              <Paper elevation={0} variant="outlined" sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '24px' }}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold' }}>ハイスコア</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>{dashboardData.highScore}</Typography>
+                </Box>
+                <Box sx={{ p: 1, borderRadius: '50%', bgcolor: '#FFF9C4', color: '#FBC02D', display: 'flex' }}>
+                  <EmojiEventsIcon />
+                </Box>
+              </Paper>
+
+              <Paper elevation={0} variant="outlined" sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '24px' }}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'bold' }}>連続プレイ</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>{dashboardData.streak}<Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>日</Typography></Typography>
+                </Box>
+                <Box sx={{ p: 1, borderRadius: '50%', bgcolor: '#FFEBEE', color: '#F44336', display: 'flex' }}>
+                  <LocalFireDepartmentIcon />
+                </Box>
+              </Paper>
+            </Stack>
 
             <Divider sx={{ my: 2 }} />
-
             {chartData.length > 1 && (
               <>
-                <Typography variant="h6" gutterBottom>最近のスコア推移</Typography>
-                <Box sx={{ height: 100, mb: 2 }}>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>スコア推移</Typography>
+                <Box sx={{ height: 200, mb: 4 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#4CAF50" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#4CAF50" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
                       <Tooltip
-                        contentStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', border: 'none', borderRadius: '8px' }}
-                        labelStyle={{ color: 'white', fontWeight: 'bold' }}
-                        itemStyle={{ color: '#8884d8' }}
+                        contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', border: 'none', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                        labelStyle={{ color: '#666', fontWeight: 'bold' }}
+                        itemStyle={{ color: '#4CAF50', fontWeight: 'bold' }}
                         formatter={(value) => [`${value}点`, 'スコア']}
                       />
-                      <Line type="monotone" dataKey="score" stroke="#8884d8" strokeWidth={2} dot={{ r: 4 }} />
-                    </LineChart>
+                      <Area type="monotone" dataKey="score" stroke="#4CAF50" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </Box>
-                <Divider sx={{ my: 2 }} />
               </>
             )}
 
-            <Typography variant="h6" gutterBottom>最近のアクティビティ</Typography>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>最近のアクティビティ</Typography>
             <Stack spacing={2}>
               {displayActivities.map((activity, index) =>
                 activity ? (
                   <Paper 
                     key={activity.id} 
-                    variant="outlined" 
+                    elevation={0}
                     sx={{ 
-                      p: 1.5, 
+                      p: 2, 
                       cursor: 'pointer',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      transition: 'all 0.2s',
                       '&:hover': {
-                        backgroundColor: 'action.hover'
+                        backgroundColor: 'action.hover',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.05)'
                       }
                     }}
                     onClick={() => navigate(`/result/${activity.id}`)}
                   >
-                    <Typography variant="body1">「{activity.challengeName}」で</Typography>
-                    <Typography variant="h5" component="p" sx={{ fontWeight: 'bold' }}>{activity.overall_score}点</Typography>
-                    <Typography variant="caption" color="text.secondary">{activity.date}</Typography>
+                    <Box sx={{ 
+                      mr: 2, 
+                      p: 1.5, 
+                      borderRadius: '12px', 
+                      bgcolor: 'primary.light', 
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <DirectionsRunIcon />
+                    </Box>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>{activity.challengeName}</Typography>
+                      <Typography variant="caption" color="text.secondary">{activity.date}</Typography>
+                    </Box>
+                    <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold' }}>{activity.overall_score}</Typography>
                   </Paper>
                 ) : (
                   // If this is the first placeholder AND there are no activities, show a message.
@@ -161,33 +208,18 @@ function DashboardPage() {
                       key="no-activity-message"
                       variant="outlined"
                       sx={{
-                        p: 1.5,
+                        p: 3,
                         textAlign: 'center',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minHeight: '91.5px',
-                        boxSizing: 'border-box',
+                        borderRadius: '12px',
+                        borderStyle: 'dashed'
                       }}
                     >
-                      <Typography variant="body2" color="primary.main">
-                        まだチャレンジ履歴がありません。
-                        <br />
+                      <Typography variant="body2" color="text.secondary">
+                        まだチャレンジ履歴がありません。<br/>
                         最初のチャレンジを始めましょう！
                       </Typography>
                     </Paper>
-                  ) : (
-                    // Otherwise, render the invisible placeholder to keep the space.
-                    <Paper
-                      key={`placeholder-${index}`}
-                      elevation={0}
-                      sx={{ p: 1.5, backgroundColor: 'transparent' }}
-                    >
-                      <Typography variant="body1" sx={{ visibility: 'hidden' }}>-</Typography>
-                      <Typography variant="h5" component="p" sx={{ fontWeight: 'bold', visibility: 'hidden' }}>-</Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ visibility: 'hidden' }}>-</Typography>
-                    </Paper>
-                  )
+                  ) : null
                 )
               )}
             </Stack>
@@ -207,6 +239,7 @@ function DashboardPage() {
               position: 'relative',
               overflow: 'hidden',
               color: 'white',
+              borderRadius: '16px',
               backgroundImage: 'url(https://images.pexels.com/photos/1149923/pexels-photo-1149923.jpeg)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
@@ -218,27 +251,31 @@ function DashboardPage() {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.5)',
+              backgroundColor: 'rgba(0,0,0,0.4)',
               zIndex: 1,
             }} />
             <Box sx={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
-              <Typography variant="h5" gutterBottom>準備はいいですか？</Typography>
+              <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+                準備はいいですか？
+              </Typography>
+              <Typography variant="h6" sx={{ mb: 4, opacity: 0.9, textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+                今日も新しいスコアを目指して走り出しましょう！
+              </Typography>
               <Button 
                 variant="contained" 
                 size="large"
                 sx={{
-                  mt: 2,
-                  fontSize: '1.5rem',
+                  fontSize: '1.2rem',
                   fontWeight: 'bold',
-                  px: 8, py: 2,
+                  px: 6, py: 1.5,
                   borderRadius: '50px',
                   color: 'white',
-                  background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                  boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
+                  background: 'linear-gradient(45deg, #4CAF50 30%, #8BC34A 90%)',
+                  boxShadow: '0 4px 15px rgba(76, 175, 80, .4)',
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   '&:hover': {
                     transform: 'scale(1.05)',
-                    boxShadow: '0 6px 10px 4px rgba(33, 203, 243, .5)',
+                    boxShadow: '0 6px 20px rgba(76, 175, 80, .6)',
                   }
                 }}
                 onClick={handleStartChallenge}
