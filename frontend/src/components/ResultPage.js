@@ -127,59 +127,183 @@ const AiCoachView = ({ feedbackText }) => {
   );
 };
 
-// 詳細対称性レポートコンポーネント (新規追加)
-const DetailedSymmetryReport = ({ symmetryData }) => {
-  const theme = useTheme();
+// --- 詳細分析セクションコンポーネント ---
 
+const SymmetrySection = ({ symmetryData }) => {
+  const theme = useTheme();
   if (!symmetryData) return null;
 
   const renderTiltDirection = (tilt) => {
-    if (Math.abs(tilt) < 0.005) { // 0.5%未満の傾きはほぼ無しとみなす
-      return "ほぼ均等";
-    }
+    if (Math.abs(tilt) < 0.005) return "ほぼ均等";
     const direction = tilt < 0 ? "左" : "右";
     const percentage = Math.abs(tilt * 100).toFixed(1);
     return `${direction}側が約${percentage}%高い傾向`;
   };
 
   return (
-    <Paper elevation={6} sx={{ p: 3, borderRadius: '16px', bgcolor: 'white' }}>
-      <Typography variant="h5" component="h2" gutterBottom sx={{ textAlign: 'center', fontWeight: 'bold', color: theme.palette.grey[800] }}>
-        詳細分析：左右の対称性
-      </Typography>
-      <Grid container spacing={3} sx={{ mt: 1 }}>
-        {Object.entries(symmetryData).map(([part, data]) => (
-          <Grid item xs={12} md={6} key={part}>
-            <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%' }}>
-              <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', color: theme.palette.primary.dark }}>
-                {partMapping[part] || part}の対称性
+    <>
+      {Object.entries(symmetryData).map(([part, data]) => (
+        <Grid item xs={12} md={6} key={part}>
+          <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%' }}>
+            <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', color: theme.palette.primary.dark }}>
+              {partMapping[part] || part}の対称性
+            </Typography>
+            <Box sx={{ textAlign: 'center', my: 2 }}>
+              <Typography variant="h4" component="p" sx={{ fontWeight: 'bold', color: theme.palette.secondary.main }}>
+                {data.score} <span style={{ fontSize: '1rem' }}>/ 25点</span>
               </Typography>
-              <Box sx={{ textAlign: 'center', my: 2 }}>
-                <Typography variant="h4" component="p" sx={{ fontWeight: 'bold', color: theme.palette.secondary.main }}>
-                  {data.score} <span style={{ fontSize: '1rem' }}>/ 25点</span>
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <MuiTooltip title="歩行中の左右のブレの大きさ。体幹の長さに対する相対的な割合で、0に近いほど安定しています。">
-                    <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
-                  </MuiTooltip>
-                  安定性 (ブレの大きさ): <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{data.avg_deviation}</Typography>
-                </Typography>
-                <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center' }}>
-                  <MuiTooltip title="左右どちらに体が傾いているかの癖。-は左、+は右が高い傾向を示します。">
-                    <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
-                  </MuiTooltip>
-                  傾きの癖: <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{renderTiltDirection(data.avg_tilt_direction)}</Typography>
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
-        ))}
+            </Box>
+            <Box>
+              <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <MuiTooltip title="歩行中の左右のブレの大きさ。体幹の長さに対する相対的な割合で、0に近いほど安定しています。">
+                  <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
+                </MuiTooltip>
+                安定性 (ブレの大きさ): <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{data.avg_deviation}</Typography>
+              </Typography>
+              <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center' }}>
+                <MuiTooltip title="左右どちらに体が傾いているかの癖。-は左、+は右が高い傾向を示します。">
+                  <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
+                </MuiTooltip>
+                傾きの癖: <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{renderTiltDirection(data.avg_tilt_direction)}</Typography>
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+      ))}
+    </>
+  );
+};
+
+const TrunkSection = ({ trunkData }) => {
+  const theme = useTheme();
+  if (!trunkData) return null;
+
+  const renderTiltDirection = (tilt) => {
+    if (Math.abs(tilt) < 0.5) return "ほぼ垂直";
+    const direction = tilt > 0 ? "右" : "左";
+    return `${direction}側に約${Math.abs(tilt).toFixed(1)}度傾き`;
+  };
+
+  return (
+    <Grid item xs={12} md={6}>
+      <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%' }}>
+        <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', color: theme.palette.primary.dark }}>
+          体幹の直立性
+        </Typography>
+        <Box sx={{ textAlign: 'center', my: 2 }}>
+          <Typography variant="h4" component="p" sx={{ fontWeight: 'bold', color: theme.palette.secondary.main }}>
+            {trunkData.score} <span style={{ fontSize: '1rem' }}>/ 25点</span>
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <MuiTooltip title="体幹が垂直からどれくらい傾いているかの平均角度（絶対値）。0に近いほど直立しています。">
+              <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
+            </MuiTooltip>
+            平均傾斜角: <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{trunkData.avg_tilt_angle} 度</Typography>
+          </Typography>
+          <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center' }}>
+            <MuiTooltip title="左右どちらに傾きがちか。">
+              <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
+            </MuiTooltip>
+            傾きの傾向: <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{renderTiltDirection(trunkData.avg_tilt_direction)}</Typography>
+          </Typography>
+        </Box>
+      </Paper>
+    </Grid>
+  );
+};
+
+const GravitySection = ({ gravityData }) => {
+  const theme = useTheme();
+  if (!gravityData) return null;
+
+  const renderSwayDirection = (bias) => {
+    if (Math.abs(bias) < 0.05) return "中心";
+    const direction = bias > 0 ? "右" : "左";
+    return `${direction}寄りに${Math.abs(bias).toFixed(2)}`;
+  };
+
+  return (
+    <Grid item xs={12} md={6}>
+      <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%' }}>
+        <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', color: theme.palette.primary.dark }}>
+          重心の安定性
+        </Typography>
+        <Box sx={{ textAlign: 'center', my: 2 }}>
+          <Typography variant="h4" component="p" sx={{ fontWeight: 'bold', color: theme.palette.secondary.main }}>
+            {gravityData.score} <span style={{ fontSize: '1rem' }}>/ 25点</span>
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <MuiTooltip title="左右のふらつきの大きさ（標準偏差）。小さいほど安定しています。">
+              <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
+            </MuiTooltip>
+            ふらつき (標準偏差): <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{gravityData.sway_magnitude}</Typography>
+          </Typography>
+          <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center' }}>
+            <MuiTooltip title="重心が左右どちらに偏っているか。0は中心、+は右、-は左。">
+              <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
+            </MuiTooltip>
+            重心の偏り: <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{renderSwayDirection(gravityData.avg_sway_direction)}</Typography>
+          </Typography>
+        </Box>
+      </Paper>
+    </Grid>
+  );
+};
+
+const RhythmSection = ({ rhythmData }) => {
+  const theme = useTheme();
+  if (!rhythmData) return null;
+
+  return (
+    <Grid item xs={12} md={6}>
+      <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%' }}>
+        <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', color: theme.palette.primary.dark }}>
+          リズムの正確性
+        </Typography>
+        <Box sx={{ textAlign: 'center', my: 2 }}>
+          <Typography variant="h4" component="p" sx={{ fontWeight: 'bold', color: theme.palette.secondary.main }}>
+            {rhythmData.score} <span style={{ fontSize: '1rem' }}>/ 25点</span>
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center' }}>
+            <MuiTooltip title="歩行リズム（ステップ間隔）のばらつき。0に近いほど一定のリズムで歩けています。">
+              <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
+            </MuiTooltip>
+            リズムのばらつき (標準偏差): <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{rhythmData.rhythm_consistency}</Typography>
+          </Typography>
+        </Box>
+      </Paper>
+    </Grid>
+  );
+};
+
+// 統合された詳細分析レポートコンポーネント
+const DetailedAnalysisReport = ({ detailedResults }) => {
+  const theme = useTheme();
+  if (!detailedResults) return null;
+
+  const { symmetry, trunk_uprightness, gravity_stability, rhythmic_accuracy } = detailedResults;
+
+  return (
+    <Paper elevation={6} sx={{ p: 3, borderRadius: '16px', bgcolor: 'white' }}>
+      <Typography variant="h5" component="h2" gutterBottom sx={{ textAlign: 'center', fontWeight: 'bold', color: theme.palette.grey[800], mb: 3 }}>
+        詳細分析レポート
+      </Typography>
+      <Grid container spacing={3}>
+        <SymmetrySection symmetryData={symmetry} />
+        <TrunkSection trunkData={trunk_uprightness} />
+        <GravitySection gravityData={gravity_stability} />
+        <RhythmSection rhythmData={rhythmic_accuracy} />
       </Grid>
     </Paper>
   );
 };
+
 
 
 // スコア履歴チャートコンポーネント
@@ -376,6 +500,9 @@ function ResultPage() {
   }));
 
   const symmetryData = resultData.detailed_results?.symmetry;
+  const trunkData = resultData.detailed_results?.trunk_uprightness;
+  const gravityData = resultData.detailed_results?.gravity_stability;
+  const rhythmData = resultData.detailed_results?.rhythmic_accuracy;
 
   return (
     <Box sx={{
@@ -411,7 +538,7 @@ function ResultPage() {
         <AiCoachView feedbackText={resultData.feedback_text} />
       </Box>
 
-      {symmetryData && <DetailedSymmetryReport symmetryData={symmetryData} />}
+      <DetailedAnalysisReport detailedResults={resultData.detailed_results} />
 
       <ScoreHistoryChart historyData={scoreHistoryForChart} />
 

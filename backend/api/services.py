@@ -54,6 +54,18 @@ class ScoringService:
 
     # --- Helper Methods ---
 
+    def _normalize_angle(self, angle):
+        """Normalizes an angle to the [-180, 180] range."""
+        while angle > 180:
+            angle -= 360
+        while angle < -180:
+            angle += 360
+        return angle
+
+    def _calculate_score(self, value, coefficient, max_points=25):
+        """Calculates a score based on a value and coefficient, capped at max_points."""
+        return max(0, max_points - (value * coefficient))
+
     def _iter_valid_landmarks(self, required_ids):
         """
         A generator that yields landmark data for frames where all required landmarks are visible.
@@ -162,7 +174,7 @@ class ScoringService:
         avg_tilt_direction = statistics.mean(angles)
         avg_deviation = statistics.mean([abs(a) for a in angles])
         
-        score = max(0, 25 - (avg_deviation * self.ANGLE_DEVIATION_COEFFICIENT))
+        score = self._calculate_score(avg_deviation, self.ANGLE_DEVIATION_COEFFICIENT)
 
         return {
             "score": round(score, 3),
@@ -173,8 +185,9 @@ class ScoringService:
     # --- Other Scoring Calculations ---
 
     def _calculate_trunk_uprightness(self):
-        """Calculates the forward/backward tilt of the trunk relative to vertical."""
-        tilt_angles = []
+        """Calculates the tilt of the trunk relative to vertical (Lateral tilt in front view)."""
+        tilt_angles_abs = []
+        tilt_angles_signed = []
         required_ids = [self.LEFT_SHOULDER, self.RIGHT_SHOULDER, self.LEFT_HIP, self.RIGHT_HIP]
 
         for landmarks in self._iter_valid_landmarks(required_ids):
@@ -182,22 +195,29 @@ class ScoringService:
             if body_vec is None:
                 continue
             
-            tilt_angle = abs(body_angle_deg - (-90))
-            if tilt_angle > 180:
-                tilt_angle = 360 - tilt_angle
+            # Calculate signed tilt relative to -90 degrees (vertical)
+            signed_tilt = self._normalize_angle(body_angle_deg - (-90))
             
-            tilt_angles.append(tilt_angle)
+            tilt_angles_signed.append(signed_tilt)
+            tilt_angles_abs.append(abs(signed_tilt))
         
         score = 0
         avg_tilt_angle = 0
-        if tilt_angles:
-            avg_tilt_angle = statistics.mean(tilt_angles)
-            score_100 = max(0, 100 - (avg_tilt_angle * self.TRUNK_TILT_ANGLE_COEFFICIENT))
+        avg_tilt_direction = 0
+        
+        if tilt_angles_abs:
+            avg_tilt_angle = statistics.mean(tilt_angles_abs)
+            avg_tilt_direction = statistics.mean(tilt_angles_signed)
+            
+            # Score out of 100 then scaled to 25
+            score_100 = self._calculate_score(avg_tilt_angle, self.TRUNK_TILT_ANGLE_COEFFICIENT, max_points=100)
             score = score_100 / 4.0
             
         self.chart_data['trunk_uprightness'] = round(score, 3)
         self.detailed_results['trunk_uprightness'] = {
-            'avg_tilt_angle': round(avg_tilt_angle, 3)
+            'score': round(score, 3),
+            'avg_tilt_angle': round(avg_tilt_angle, 3),
+            'avg_tilt_direction': round(avg_tilt_direction, 3)
         }
 
     def _calculate_gravity_stability(self):
@@ -210,11 +230,20 @@ class ScoringService:
             hip_center_x_coords.append(hip_center_x)
 
         score = 0
+        stdev = 0
+        avg_sway_direction = 0
+        
         if len(hip_center_x_coords) >= 2:
             stdev = statistics.stdev(hip_center_x_coords)
-            score = max(0, 25 - (stdev * self.STABILITY_STD_DEV_COEFFICIENT))
+            avg_sway_direction = statistics.mean(hip_center_x_coords) - 0.5
+            score = self._calculate_score(stdev, self.STABILITY_STD_DEV_COEFFICIENT)
 
         self.chart_data['gravity_stability'] = round(score, 3)
+        self.detailed_results['gravity_stability'] = {
+            'score': round(score, 3),
+            'sway_magnitude': round(stdev, 5),
+            'avg_sway_direction': round(avg_sway_direction, 3)
+        }
   
     def _calculate_rhythmic_accuracy(self):
         """Calculates the consistency of the walking rhythm."""
@@ -238,12 +267,18 @@ class ScoringService:
         all_intervals = detect_step_intervals(left_y) + detect_step_intervals(right_y)
         
         score = 0
+        std_dev = 0
         if all_intervals:
             std_dev = statistics.stdev(all_intervals) if len(all_intervals) > 1 else 0
-            score_100 = max(0, 100 - (std_dev * self.RHYTHM_STD_DEV_COEFFICIENT))
+            # Score out of 100 then scaled to 25
+            score_100 = self._calculate_score(std_dev, self.RHYTHM_STD_DEV_COEFFICIENT, max_points=100)
             score = score_100 / 4.0
 
         self.chart_data['rhythmic_accuracy'] = round(score, 3)
+        self.detailed_results['rhythmic_accuracy'] = {
+            'score': round(score, 3),
+            'rhythm_consistency': round(std_dev, 5)
+        }
 
     def _generate_feedback(self):
         """Generates a simple feedback message based on the overall score."""
