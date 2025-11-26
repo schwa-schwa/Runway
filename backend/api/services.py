@@ -1,5 +1,9 @@
 import math
 import statistics
+import json
+import requests
+import os
+import time
 
 class ScoringService:
     """
@@ -8,6 +12,7 @@ class ScoringService:
     # --- Constants ---
 
     # MediaPipe Pose Landmark IDs
+    NOSE = 0
     LEFT_SHOULDER = 11
     RIGHT_SHOULDER = 12
     LEFT_HIP = 23
@@ -221,28 +226,54 @@ class ScoringService:
         }
 
     def _calculate_gravity_stability(self):
-        """Calculates side-to-side sway."""
+        """Calculates side-to-side sway for both hips and head."""
+        # --- Hip Sway ---
         hip_center_x_coords = []
-        required_ids = [self.LEFT_HIP, self.RIGHT_HIP]
+        hip_required_ids = [self.LEFT_HIP, self.RIGHT_HIP]
 
-        for landmarks in self._iter_valid_landmarks(required_ids):
+        for landmarks in self._iter_valid_landmarks(hip_required_ids):
             hip_center_x = (landmarks[self.LEFT_HIP]['x'] + landmarks[self.RIGHT_HIP]['x']) / 2
             hip_center_x_coords.append(hip_center_x)
 
-        score = 0
-        stdev = 0
-        avg_sway_direction = 0
+        hip_score = 0
+        hip_stdev = 0
+        avg_hip_sway_direction = 0
         
         if len(hip_center_x_coords) >= 2:
-            stdev = statistics.stdev(hip_center_x_coords)
-            avg_sway_direction = statistics.mean(hip_center_x_coords) - 0.5
-            score = self._calculate_score(stdev, self.STABILITY_STD_DEV_COEFFICIENT)
+            hip_stdev = statistics.stdev(hip_center_x_coords)
+            avg_hip_sway_direction = statistics.mean(hip_center_x_coords) - 0.5
+            hip_score = self._calculate_score(hip_stdev, self.STABILITY_STD_DEV_COEFFICIENT)
 
-        self.chart_data['gravity_stability'] = round(score, 3)
+        # --- Head Sway ---
+        nose_x_coords = []
+        head_required_ids = [self.NOSE]
+
+        for landmarks in self._iter_valid_landmarks(head_required_ids):
+            nose_x = landmarks[self.NOSE]['x']
+            nose_x_coords.append(nose_x)
+
+        head_score = 0
+        head_stdev = 0
+        avg_head_sway_direction = 0
+        
+        if len(nose_x_coords) >= 2:
+            head_stdev = statistics.stdev(nose_x_coords)
+            avg_head_sway_direction = statistics.mean(nose_x_coords) - 0.5
+            head_score = self._calculate_score(head_stdev, self.STABILITY_STD_DEV_COEFFICIENT)
+
+        # --- Combined Score ---
+        # Average of hip and head stability scores
+        combined_score = (hip_score + head_score) / 2
+
+        self.chart_data['gravity_stability'] = round(combined_score, 3)
         self.detailed_results['gravity_stability'] = {
-            'score': round(score, 3),
-            'sway_magnitude': round(stdev, 5),
-            'avg_sway_direction': round(avg_sway_direction, 3)
+            'score': round(combined_score, 3),
+            'hip_score': round(hip_score, 3),
+            'hip_sway_magnitude': round(hip_stdev, 5),
+            'avg_hip_sway_direction': round(avg_hip_sway_direction, 3),
+            'head_score': round(head_score, 3),
+            'head_sway_magnitude': round(head_stdev, 5),
+            'avg_head_sway_direction': round(avg_head_sway_direction, 3)
         }
   
     def _calculate_rhythmic_accuracy(self):
@@ -281,5 +312,80 @@ class ScoringService:
         }
 
     def _generate_feedback(self):
-        """Generates a simple feedback message based on the overall score."""
-        return f"総合スコアは {self.overall_score}点です！"
+        """Generates feedback based on the overall score and advice."""
+        feedback = f"総合スコアは {self.overall_score}点です！\n\n"
+        feedback += self._generate_advice()
+        return feedback
+
+    def _generate_advice(self):
+        """Generates advice using local Ollama instance (Gemma3)."""
+        if not self.detailed_results:
+            return ""
+
+        # Load expert knowledge
+        expert_knowledge = ""
+        try:
+            # services.py is in backend/api/services.py
+            # We want to look in backend/expert_knowledge.md
+            backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            knowledge_path = os.path.join(backend_dir, "expert_knowledge.md")
+            
+            if os.path.exists(knowledge_path):
+                with open(knowledge_path, "r", encoding="utf-8") as f:
+                    expert_knowledge = f.read()
+        except Exception as e:
+            print(f"Failed to load expert knowledge: {e}")
+
+        # Construct prompt
+        prompt = f"""
+あなたはプロのウォーキングインストラクターです。
+以下のウォーキング分析スコア（25点満点）と専門知識に基づいて、ユーザーに改善のための具体的なアドバイスを日本語で提供してください。
+
+【重要：免責事項】
+これは医療診断ではありません。痛みがある場合は医師に相談するよう促してください。断定的な病状の指摘は避けてください。
+
+【専門家の知見】
+{expert_knowledge}
+
+【ユーザーの詳細分析データ】
+{json.dumps(self.detailed_results, ensure_ascii=False, indent=2)}
+
+【アドバイスの作成指示】
+1. **文字数**: 全体で600〜800文字程度（総評150文字+各項目100〜150文字*4項目）。
+2. **構成**:
+    - **総合評価**: 全体のスコアに基づいた総評と励ましの言葉。
+    - **因果関係の分析**: 「体幹の直立性（姿勢）」を起点とし、他の項目への影響を考察してください（例：「姿勢が傾いているため、左右差が生じています」）。
+    - **項目別アドバイス**: 各項目について、具体的な改善点と自宅でできるトレーニング（プランク、カーフレイズ等）を提案してください。
+3. **トーン**: ポジティブで親しみやすく、かつ専門的。
+
+出力はMarkdown形式で見やすく整形してください。
+"""
+        
+        print("Starting Ollama generation...")
+        start_time = time.time()
+        
+        try:
+            # Attempt to connect to local Ollama instance
+            response = requests.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": "gemma3", # User specified model
+                    "prompt": prompt,
+                    "stream": False
+                },
+                timeout=300 # Increased timeout to 5 minutes for CPU inference
+            )
+            
+            elapsed_time = time.time() - start_time
+            print(f"Ollama generation took {elapsed_time:.2f} seconds.")
+            
+            if response.status_code == 200:
+                return response.json().get("response", "")
+            else:
+                print(f"Ollama API returned status: {response.status_code}")
+                return "（アドバイス生成に失敗しました。Ollamaのステータスを確認してください。）"
+                
+        except requests.exceptions.RequestException as e:
+            # Fail silently or gracefully if Ollama is not running
+            print(f"Ollama connection error: {e}")
+            return "（詳細なアドバイスを表示するには、ローカルLLMサーバー(Ollama)を起動し、gemma3モデルをpullしてください。生成に時間がかかっている可能性があります。）"

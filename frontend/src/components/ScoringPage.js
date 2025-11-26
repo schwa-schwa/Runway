@@ -234,8 +234,21 @@ function ScoringPage() {
   }, [scoringStatus, scoringMode]);
 
   // スコア送信の管理（データ送信担当）
+  const hasSubmittedRef = useRef(false);
+
+  // Reset submitted ref when status changes to idle
+  useEffect(() => {
+    if (scoringStatus === 'idle') {
+      hasSubmittedRef.current = false;
+    }
+  }, [scoringStatus]);
+
+  // スコア送信の管理（データ送信担当）
   useEffect(() => {
     if (scoringStatus === 'finished') {
+      if (hasSubmittedRef.current) return;
+      hasSubmittedRef.current = true;
+
       const submitData = async () => {
         if (recordedLandmarks.length === 0) {
           alert('データが記録されませんでした。もう一度お試しください。');
@@ -397,7 +410,7 @@ function ScoringPage() {
       )}
 
 
-      <Paper elevation={3} sx={{ width: '100%', maxWidth: '960px', overflow: 'hidden' }}>
+      <Paper elevation={3} sx={{ width: '100%', maxWidth: '1280px', overflow: 'hidden' }}>
         {scoringStatus === 'scoring' && scoringMode === 'time' && <LinearProgress variant="determinate" value={progress} />}
         <Box sx={{ position: 'relative' }}>
           <RealtimeMetricsDisplay metrics={realtimeMetrics} visibility={metricsVisibility} />

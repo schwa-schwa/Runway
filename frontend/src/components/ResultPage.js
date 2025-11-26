@@ -5,6 +5,7 @@ import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useTheme } from '@mui/material/styles';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import ReactMarkdown from 'react-markdown';
 
 // バックエンドの英語キーと、グラフに表示する日本語名を対応させるためのオブジェクト
 const subjectMapping = {
@@ -96,6 +97,8 @@ const PerformanceAnalysis = ({ chartData }) => {
   );
 };
 
+
+
 // AIコーチの視点コンポーネント
 const AiCoachView = ({ feedbackText }) => {
   const theme = useTheme();
@@ -117,10 +120,28 @@ const AiCoachView = ({ feedbackText }) => {
           borderLeft: `4px solid ${theme.palette.primary.main}`,
           bgcolor: theme.palette.grey[50],
           borderRadius: '0 8px 8px 0',
+          '& p': {
+            margin: '0.5em 0',
+            lineHeight: 1.8,
+            color: theme.palette.grey[800],
+          },
+          '& h1, & h2, & h3': {
+             color: theme.palette.primary.dark,
+             marginTop: '1em',
+             marginBottom: '0.5em',
+             fontWeight: 'bold'
+          },
+          '& ul, & ol': {
+             paddingLeft: '1.5em',
+          },
+          '& li': {
+             marginBottom: '0.3em',
+          },
+          '& strong': {
+             color: theme.palette.secondary.dark,
+          }
         }}>
-          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, color: theme.palette.grey[800] }}>
-            {feedbackText}
-          </Typography>
+          <ReactMarkdown>{feedbackText}</ReactMarkdown>
         </Box>
       </Paper>
     </Box>
@@ -236,23 +257,44 @@ const GravitySection = ({ gravityData }) => {
           </Typography>
         </Box>
         <Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mt: 2, mb: 1, color: theme.palette.grey[700] }}>
+            腰の安定性 <span style={{ color: theme.palette.secondary.main }}>({gravityData.hip_score}点)</span>
+          </Typography>
           <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <MuiTooltip title="左右のふらつきの大きさ（標準偏差）。小さいほど安定しています。">
+            <MuiTooltip title="腰の左右のふらつきの大きさ（標準偏差）。小さいほど安定しています。">
               <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
             </MuiTooltip>
-            ふらつき (標準偏差): <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{gravityData.sway_magnitude}</Typography>
+            ふらつき: <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{gravityData.hip_sway_magnitude}</Typography>
           </Typography>
           <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center' }}>
-            <MuiTooltip title="重心が左右どちらに偏っているか。0は中心、+は右、-は左。">
+            <MuiTooltip title="腰の位置が左右どちらに偏っているか。">
               <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
             </MuiTooltip>
-            重心の偏り: <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{renderSwayDirection(gravityData.avg_sway_direction)}</Typography>
+            偏り: <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{renderSwayDirection(gravityData.avg_hip_sway_direction)}</Typography>
+          </Typography>
+
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mt: 2, mb: 1, color: theme.palette.grey[700] }}>
+            頭の安定性 <span style={{ color: theme.palette.secondary.main }}>({gravityData.head_score}点)</span>
+          </Typography>
+          <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <MuiTooltip title="頭の左右のブレの大きさ（標準偏差）。小さいほど視線が安定しています。">
+              <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
+            </MuiTooltip>
+            ブレ: <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{gravityData.head_sway_magnitude}</Typography>
+          </Typography>
+          <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center' }}>
+            <MuiTooltip title="頭の位置が左右どちらに偏っているか。">
+              <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
+            </MuiTooltip>
+            偏り: <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{renderSwayDirection(gravityData.avg_head_sway_direction)}</Typography>
           </Typography>
         </Box>
       </Paper>
     </Grid>
   );
 };
+
+
 
 const RhythmSection = ({ rhythmData }) => {
   const theme = useTheme();
