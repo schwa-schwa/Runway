@@ -74,10 +74,11 @@ const ScoreDisplay = ({ displayScore, isBestScore, rank, totalParticipants }) =>
 };
 
 // パフォーマンス分析コンポーネント
+// パフォーマンス分析コンポーネント
 const PerformanceAnalysis = ({ chartData }) => {
   const theme = useTheme();
   return (
-    <Box sx={{ width: { xs: '100%', md: '41.66%' } }}> {/* 5/12 */}
+    <Box sx={{ width: '100%', height: '100%' }}>
       <Paper elevation={6} sx={{ p: 4, borderRadius: '16px', bgcolor: 'white', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Typography variant="h5" component="h2" gutterBottom sx={{ textAlign: 'center', fontWeight: 'bold', color: theme.palette.grey[800] }}>
           パフォーマンス分析
@@ -85,10 +86,27 @@ const PerformanceAnalysis = ({ chartData }) => {
         <Box sx={{ flexGrow: 1, minHeight: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
+              <defs>
+                <linearGradient id="radarFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#2979ff" stopOpacity={0.4}/>
+                </linearGradient>
+              </defs>
               <PolarGrid stroke={theme.palette.grey[300]} />
-              <PolarAngleAxis dataKey="subject" stroke={theme.palette.grey[700]} />
-              <PolarRadiusAxis domain={[0, 25]} angle={30} stroke={theme.palette.grey[500]} />
-              <Radar name="今回のスコア" dataKey="score" stroke={theme.palette.primary.main} fill={theme.palette.info.light} fillOpacity={0.6} />
+              <PolarAngleAxis dataKey="subject" tick={{ fill: theme.palette.grey[700], fontSize: 14, fontWeight: 'bold' }} />
+              <PolarRadiusAxis domain={[0, 25]} angle={30} stroke={theme.palette.grey[400]} tick={false} axisLine={false} />
+              <Radar
+                name="今回のスコア"
+                dataKey="score"
+                stroke="#00e5ff"
+                strokeWidth={4}
+                fill="url(#radarFill)"
+                fillOpacity={1}
+              />
+              <Tooltip 
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                itemStyle={{ color: theme.palette.primary.dark, fontWeight: 'bold' }}
+              />
             </RadarChart>
           </ResponsiveContainer>
         </Box>
@@ -103,7 +121,7 @@ const PerformanceAnalysis = ({ chartData }) => {
 const AiCoachView = ({ feedbackText }) => {
   const theme = useTheme();
   return (
-    <Box sx={{ width: { xs: '100%', md: '58.33%' } }}> {/* 7/12 */}
+    <Box sx={{ width: '100%', height: '100%' }}>
       <Paper elevation={6} sx={{ p: 4, borderRadius: '16px', bgcolor: 'white', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
           <LightbulbIcon sx={{ color: theme.palette.primary.main, mr: 1 }} />
@@ -164,8 +182,8 @@ const SymmetrySection = ({ symmetryData }) => {
   return (
     <>
       {Object.entries(symmetryData).map(([part, data]) => (
-        <Grid item xs={12} md={6} key={part}>
-          <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%' }}>
+        <Box key={part} sx={{ flex: 1 }}>
+          <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%', minHeight: '220px' }}>
             <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', color: theme.palette.primary.dark }}>
               {partMapping[part] || part}の対称性
             </Typography>
@@ -189,7 +207,7 @@ const SymmetrySection = ({ symmetryData }) => {
               </Typography>
             </Box>
           </Paper>
-        </Grid>
+        </Box>
       ))}
     </>
   );
@@ -206,8 +224,8 @@ const TrunkSection = ({ trunkData }) => {
   };
 
   return (
-    <Grid item xs={12} md={6}>
-      <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%' }}>
+    <Box sx={{ flex: 1 }}>
+      <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%', minHeight: '220px' }}>
         <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', color: theme.palette.primary.dark }}>
           体幹の直立性
         </Typography>
@@ -231,7 +249,7 @@ const TrunkSection = ({ trunkData }) => {
           </Typography>
         </Box>
       </Paper>
-    </Grid>
+    </Box>
   );
 };
 
@@ -246,8 +264,8 @@ const GravitySection = ({ gravityData }) => {
   };
 
   return (
-    <Grid item xs={12} md={6}>
-      <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%' }}>
+    <Box sx={{ flex: 1 }}>
+      <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%', minHeight: '220px' }}>
         <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', color: theme.palette.primary.dark }}>
           重心の安定性
         </Typography>
@@ -290,19 +308,17 @@ const GravitySection = ({ gravityData }) => {
           </Typography>
         </Box>
       </Paper>
-    </Grid>
+    </Box>
   );
 };
-
-
 
 const RhythmSection = ({ rhythmData }) => {
   const theme = useTheme();
   if (!rhythmData) return null;
 
   return (
-    <Grid item xs={12} md={6}>
-      <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%' }}>
+    <Box sx={{ flex: 1 }}>
+      <Paper variant="outlined" sx={{ p: 3, borderRadius: '12px', height: '100%', minHeight: '220px' }}>
         <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', color: theme.palette.primary.dark }}>
           リズムの正確性
         </Typography>
@@ -320,7 +336,7 @@ const RhythmSection = ({ rhythmData }) => {
           </Typography>
         </Box>
       </Paper>
-    </Grid>
+    </Box>
   );
 };
 
@@ -332,44 +348,15 @@ const DetailedAnalysisReport = ({ detailedResults }) => {
   const { symmetry, trunk_uprightness, gravity_stability, rhythmic_accuracy } = detailedResults;
 
   return (
-    <Paper elevation={6} sx={{ p: 3, borderRadius: '16px', bgcolor: 'white' }}>
+    <Paper elevation={6} sx={{ p: 3, borderRadius: '16px', bgcolor: 'white', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Typography variant="h5" component="h2" gutterBottom sx={{ textAlign: 'center', fontWeight: 'bold', color: theme.palette.grey[800], mb: 3 }}>
         詳細分析レポート
       </Typography>
-      <Grid container spacing={3}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
         <SymmetrySection symmetryData={symmetry} />
         <TrunkSection trunkData={trunk_uprightness} />
         <GravitySection gravityData={gravity_stability} />
         <RhythmSection rhythmData={rhythmic_accuracy} />
-      </Grid>
-    </Paper>
-  );
-};
-
-
-
-// スコア履歴チャートコンポーネント
-const ScoreHistoryChart = ({ historyData }) => {
-  const theme = useTheme();
-  return (
-    <Paper elevation={6} sx={{ p: 3, borderRadius: '16px', bgcolor: 'white' }}>
-      <Typography variant="h5" component="h2" gutterBottom sx={{ textAlign: 'center', fontWeight: 'bold', color: theme.palette.grey[800] }}>
-        このチャレンジのスコア推移
-      </Typography>
-      <Box sx={{ height: 300, mt: 2 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={historyData}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.grey[300]} />
-            <XAxis dataKey="date" stroke={theme.palette.grey[700]} />
-            <YAxis domain={[0, 100]} stroke={theme.palette.grey[700]} />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="overall_score" stroke={theme.palette.primary.main} activeDot={{ r: 8 }} name="スコア" />
-          </LineChart>
-        </ResponsiveContainer>
       </Box>
     </Paper>
   );
@@ -447,7 +434,6 @@ function ResultPage() {
   const [isBestScore, setIsBestScore] = useState(false);
   const [rank, setRank] = useState(null);
   const [totalParticipants, setTotalParticipants] = useState(null);
-  const [scoreHistoryForChart, setScoreHistoryForChart] = useState([]); // スコア履歴チャート用
 
   // --- データ取得ロジック ---
   useEffect(() => {
@@ -473,7 +459,6 @@ function ResultPage() {
         setIsBestScore(data.main_score.overall_score > data.personal_best);
         setRank(data.ranking.rank);
         setTotalParticipants(data.ranking.total_participants);
-        setScoreHistoryForChart(data.score_history);
 
       } catch (err) {
         console.error(err);
@@ -541,11 +526,6 @@ function ResultPage() {
     fullMark: 25,
   }));
 
-  const symmetryData = resultData.detailed_results?.symmetry;
-  const trunkData = resultData.detailed_results?.trunk_uprightness;
-  const gravityData = resultData.detailed_results?.gravity_stability;
-  const rhythmData = resultData.detailed_results?.rhythmic_accuracy;
-
   return (
     <Box sx={{
       minHeight: '100vh',
@@ -557,32 +537,36 @@ function ResultPage() {
       gap: 3,
       boxSizing: 'border-box',
     }}>
-      <Typography variant="h4" component="h1" sx={{ mb: 3, textAlign: 'center', fontWeight: 'bold', color: theme.palette.grey[800] }}>
+      <Typography variant="h4" component="h1" sx={{ mb: 1, textAlign: 'center', fontWeight: 'bold', color: theme.palette.grey[800] }}>
         採点結果
       </Typography>
 
-      <ScoreDisplay
-        displayScore={displayScore}
-        isBestScore={isBestScore}
-        rank={rank}
-        totalParticipants={totalParticipants}
-      />
-      
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', md: 'row' },
-          gap: 3,
-          mb: 3,
-        }}
-      >
-        <PerformanceAnalysis chartData={chartDataForRecharts} />
-        <AiCoachView feedbackText={resultData.feedback_text} />
+      {/* Score Display (Full Width) */}
+      <Box sx={{ width: '100%' }}>
+        <ScoreDisplay
+          displayScore={displayScore}
+          isBestScore={isBestScore}
+          rank={rank}
+          totalParticipants={totalParticipants}
+        />
       </Box>
 
-      <DetailedAnalysisReport detailedResults={resultData.detailed_results} />
-
-      <ScoreHistoryChart historyData={scoreHistoryForChart} />
+      {/* Performance Analysis (Full Width) */}
+      <Box sx={{ width: '100%', height: '500px' }}>
+         <PerformanceAnalysis chartData={chartDataForRecharts} />
+      </Box>
+      
+      {/* Middle Section: Detailed Analysis and AI Coach */}
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
+        <Box sx={{ flex: { md: 3 }, width: '100%' }}>
+          <DetailedAnalysisReport detailedResults={resultData.detailed_results} />
+        </Box>
+        <Box sx={{ flex: { md: 7 }, width: '100%' }}>
+          <Box sx={{ height: '100%' }}>
+            <AiCoachView feedbackText={resultData.feedback_text} />
+          </Box>
+        </Box>
+      </Box>
 
       <ActionButtons onNavigate={navigate} />
     </Box>

@@ -40,7 +40,11 @@ const METRIC_DEFINITIONS = {
       return signedTiltAngle;
     }
   },
-  //将来的にここに新しい指標（例: kneeAngle）を追加できる
+  stepCount: {
+    name: "歩数",
+    unit: "歩",
+    calculation: () => null // Stateful calculation handled separately
+  }
 };
 
 const calculateAllRealtimeMetrics = (landmarks) => {
@@ -74,7 +78,8 @@ const RealtimeMetricsDisplay = ({ metrics, visibility }) => {
       {Object.keys(METRIC_DEFINITIONS).map(key => (
         visibility[key] && metrics[key] !== undefined && (
           <Typography key={key} variant="h6" component="p" sx={{ fontWeight: 'bold' }}>
-            {METRIC_DEFINITIONS[key].name}: {metrics[key].toFixed(1)}{METRIC_DEFINITIONS[key].unit}
+            {METRIC_DEFINITIONS[key].name}: {key === 'stepCount' ? metrics[key] : metrics[key].toFixed(1)}
+            {METRIC_DEFINITIONS[key].unit}
           </Typography>
         )
       ))}
@@ -129,6 +134,12 @@ function ScoringPage() {
   const canvasRef = useRef(null);
   const requestRef = useRef();
   const scoringStatusRef = useRef(scoringStatus);
+  const hasSubmittedRef = useRef(false);
+
+  // Step Counting Refs
+  const leftAnkleHistory = useRef([]);
+  const rightAnkleHistory = useRef([]);
+  const stepCountRef = useRef(0);
 
   const handleModeChange = (event, newMode) => {
     if (newMode !== null) {
@@ -206,6 +217,11 @@ function ScoringPage() {
     let timer;
     if (scoringStatus === 'countdown') {
       setMessage('3');
+      // Reset step count on start
+      stepCountRef.current = 0;
+      leftAnkleHistory.current = [];
+      rightAnkleHistory.current = [];
+      
       setTimeout(() => setMessage('2'), 1000);
       setTimeout(() => setMessage('1'), 2000);
       setTimeout(() => {
@@ -233,13 +249,11 @@ function ScoringPage() {
     };
   }, [scoringStatus, scoringMode]);
 
-  // スコア送信の管理（データ送信担当）
-  const hasSubmittedRef = useRef(false);
-
   // Reset submitted ref when status changes to idle
   useEffect(() => {
     if (scoringStatus === 'idle') {
       hasSubmittedRef.current = false;
+      stepCountRef.current = 0; // Reset display as well if needed
     }
   }, [scoringStatus]);
 
@@ -303,6 +317,39 @@ function ScoringPage() {
             const landmarks = results.landmarks[0];
             
             const metrics = calculateAllRealtimeMetrics(landmarks);
+
+            // --- Step Counting Logic ---
+            if (scoringStatusRef.current === 'scoring') {
+              const LEFT_ANKLE = 27;
+              const RIGHT_ANKLE = 28;
+              const leftY = landmarks[LEFT_ANKLE].y;
+              const rightY = landmarks[RIGHT_ANKLE].y;
+
+              const updateHistoryAndCheckStep = (historyRef, currentY) => {
+                historyRef.current.push(currentY);
+                if (historyRef.current.length > 3) {
+                  historyRef.current.shift();
+                }
+                if (historyRef.current.length === 3) {
+                  const [y_prev2, y_prev1, y_curr] = historyRef.current;
+                  // Local minimum detection (highest point in screen coordinates)
+                  // y increases downwards, so min y is max height
+                  if (y_prev2 > y_prev1 && y_prev1 < y_curr) {
+                    return true;
+                  }
+                }
+                return false;
+              };
+
+              if (updateHistoryAndCheckStep(leftAnkleHistory, leftY)) {
+                stepCountRef.current += 1;
+              }
+              if (updateHistoryAndCheckStep(rightAnkleHistory, rightY)) {
+                stepCountRef.current += 1;
+              }
+            }
+            
+            metrics.stepCount = stepCountRef.current;
             setRealtimeMetrics(metrics);
             
             if (scoringStatusRef.current === 'scoring') {
