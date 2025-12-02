@@ -271,6 +271,7 @@ function ScoringPage() {
         }
         try {
           await new Promise(resolve => setTimeout(resolve, 1000)); // FINISH表示を見せる
+          setMessage('AIがフォームを解析しています...');
           const response = await fetch('http://127.0.0.1:8000/api/score/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -406,7 +407,7 @@ function ScoringPage() {
     );
   }
 
-  const showOverlay = scoringStatus === 'countdown' || (scoringStatus === 'finished' && message === 'FINISH');
+  const showOverlay = scoringStatus === 'countdown' || scoringStatus === 'finished';
 
   return (
     <Box sx={{
@@ -450,9 +451,18 @@ function ScoringPage() {
             '100%': { transform: 'scale(1)', opacity: 1 },
           },
         }}>
-          <Typography variant="h1" component="p" sx={{ fontSize: '80vmin', fontWeight: 'bold', color: 'white', animation: 'zoomAnimation 0.5s ease-out' }}>
-            {message}
-          </Typography>
+          {scoringStatus === 'finished' && message !== 'FINISH' ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'white' }}>
+              <CircularProgress color="inherit" size={80} thickness={4} />
+              <Typography variant="h4" sx={{ mt: 3, fontWeight: 'bold', textShadow: '0px 2px 4px rgba(0,0,0,0.5)' }}>
+                {message}
+              </Typography>
+            </Box>
+          ) : (
+            <Typography variant="h1" component="p" sx={{ fontSize: '80vmin', fontWeight: 'bold', color: 'white', animation: 'zoomAnimation 0.5s ease-out' }}>
+              {message}
+            </Typography>
+          )}
         </Box>
       )}
 
