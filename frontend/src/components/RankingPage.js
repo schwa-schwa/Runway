@@ -44,7 +44,7 @@ const RankingPage = () => {
   useEffect(() => {
     const fetchChallenges = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/challenges/');
+        const response = await fetch(`/api/challenges/`);
         if (!response.ok) throw new Error('チャレンジ一覧の取得に失敗しました。');
         const data = await response.json();
         setChallenges(data);
@@ -66,7 +66,7 @@ const RankingPage = () => {
       setError('');
       setRankingData(null);
       try {
-        const response = await fetch(`http://localhost:8000/api/ranking/?challenge=${selectedChallenge}&user=${currentUser.id}`);
+        const response = await fetch(`/api/ranking/?challenge=${selectedChallenge}&user=${currentUser.id}`);
         if (!response.ok) throw new Error('ランキングデータの取得に失敗しました。');
         const data = await response.json();
         setRankingData(data);

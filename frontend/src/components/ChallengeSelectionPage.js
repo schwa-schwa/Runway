@@ -9,7 +9,7 @@ function ChallengeSelectionPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const apiUrl = "http://127.0.0.1:8000/api/challenges/";
+    const apiUrl = "/api/challenges/";
     const fetchChallenges = async () => {
       try {
         const response = await fetch(apiUrl);

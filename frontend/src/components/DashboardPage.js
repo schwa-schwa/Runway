@@ -34,7 +34,7 @@ function DashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`http://localhost:8000/api/dashboard/?user=${currentUser.id}`);
+        const response = await fetch(`/api/dashboard/?user=${currentUser.id}`);
         if (!response.ok) {
           throw new Error('ダッシュボードデータの取得に失敗しました。');
         }

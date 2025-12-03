@@ -152,7 +152,7 @@ function ScoringPage() {
     if (!challengeId) return;
     const fetchChallenge = async () => {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/api/challenges/${challengeId}/`);
+        const response = await fetch(`/api/challenges/${challengeId}/`);
         if (!response.ok) throw new Error('Challenge not found');
         const data = await response.json();
         setChallenge(data);
@@ -272,7 +272,7 @@ function ScoringPage() {
         try {
           await new Promise(resolve => setTimeout(resolve, 1000)); // FINISH表示を見せる
           setMessage('AIがフォームを解析しています...');
-          const response = await fetch('http://127.0.0.1:8000/api/score/', {
+          const response = await fetch('/api/score/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

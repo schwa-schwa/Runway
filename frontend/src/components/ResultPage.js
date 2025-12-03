@@ -448,7 +448,7 @@ function ResultPage() {
         setLoading(true);
 
         // 新しい単一のエンドポイントにリクエスト
-        const response = await fetch(`http://localhost:8000/api/result/${scoreId}/`);
+        const response = await fetch(`/api/result/${scoreId}/`);
         if (!response.ok) {
           throw new Error(`結果データの取得に失敗しました。(ID: ${scoreId})`);
         }

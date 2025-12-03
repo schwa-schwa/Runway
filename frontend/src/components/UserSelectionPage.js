@@ -22,7 +22,7 @@ function UserSelectionPage() {
   const navigate = useNavigate();
   const { setCurrentUser } = useUser()
 
-  const apiUrl = "http://127.0.0.1:8000/api/users/";
+  const apiUrl = "/api/users/";
 
   const fetchUsers = async () => {
     try {

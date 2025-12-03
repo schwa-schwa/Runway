@@ -3,6 +3,7 @@
 ## 概要
 
 このアプリケーションは、ユーザーが撮影した動画からリアルタイムで姿勢を分析し、スコアをフィードバックする卒業研究プロジェクトです。MediaPipeを使用して体のランドマークを検出し、複数の指標に基づいて姿勢の正確性を評価します。
+Dockerを使用して環境構築を行うため、OSに依存せず簡単に実行できます。
 
 ## 主な機能
 
@@ -10,101 +11,83 @@
 *   チャレンジ（分析する動作）の選択機能
 *   動画によるリアルタイム姿勢分析・採点機能
 *   分析結果の表示機能
+*   AIによるアドバイス生成機能（Gemini API使用）
 
 ## 使用技術
 
-*   **バックエンド**: Python, Django, Django REST Framework
-*   **フロントエンド**: React, JavaScript
+*   **バックエンド**: Python, Django, Django REST Framework, Gunicorn
+*   **フロントエンド**: React, JavaScript, Nginx
+*   **データベース**: PostgreSQL
 *   **姿勢推定**: Google MediaPipe
+*   **AIアドバイス**: Google Gemini API
+*   **インフラ**: Docker, Docker Compose
 
 ---
 
 ## 前提条件
 
-このアプリケーションをローカル環境で実行するには、以下のソフトウェアがインストールされている必要があります。
-
-*   **Node.js (npmも同時にインストールされます)**
-    *   フロントエンドの実行に必要です。
-    *   [公式サイト](https://nodejs.org/)からダウンロードできます。
-
-*   **Python**
-    *   バックエンドの実行に必要です。
-    *   [公式サイト](https://www.python.org/)からダウンロードできます。
+*   **Docker Desktop**: インストールされ、起動していること。
+*   **Google API Key**: Gemini APIを使用するために必要です。
 
 ## 起動手順
 
-このアプリケーションは、バックエンド（サーバー）とフロントエンド（画面）の2つを同時に起動する必要があります。以下の手順に従ってください。
-
 ### 1. プロジェクトのダウンロード
 
-まず、プロジェクトファイルをPCにダウンロードします。
-
 ```bash
-git clone https://github.com/schwa-schwa/Runway.git
-cd Runway
+git clone git@github.com:schwa-schwa/Runway.git
+
 ```
 
-### 2. バックエンドのセットアップ＆起動
+### 2. 環境変数の設定
 
-サーバー側のプログラムを起動します。
+`runway-app` ディレクトリ直下に `.env` ファイルを作成し、以下の内容を記述してください。
+**注意**: `your_api_key_here` の部分は、ご自身のGoogle APIキーに書き換えてください。
 
-1.  **バックエンドのディレクトリに移動**
-    ```bash
-    cd backend
-    ```
+```env
+POSTGRES_DB=postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_HOST=db
+GOOGLE_API_KEY=your_api_key_here
+```
 
-2.  **Python仮想環境の作成と有効化**
-    *   **仮想環境を作成（初回のみ）**
-        ```bash
-        python -m venv venv
-        ```
-    *   **仮想環境を有効化**
-        *   **Windowsの場合:**
-            ```bash
-            venv\Scripts\activate
-            ```
-        *   **Mac/Linuxの場合:**
-            ```bash
-            source venv/bin/activate
-            ```
-    *(ターミナルの行頭に `(venv)` と表示されれば成功です)*
+### 3. アプリケーションのビルドと起動
 
-3.  **必要なライブラリをインストール**
-    ```bash
-    pip install -r requirements.txt
-    ```
+以下のコマンドを実行して、コンテナをビルド・起動します。
+コンテナ起動時に自動的にデータベースのマイグレーションと静的ファイルの収集が実行されます。
 
-4.  **データベースを準備**
-    ```bash
-    python manage.py migrate
-    ```
+```bash
+docker-compose up -d --build
+```
 
-5.  **バックエンドサーバーを起動**
-    ```bash
-    python manage.py runserver
-    ```
-    *(`Watching for file changes with StatReloader` と表示されれば起動成功です。このターミナルは起動したままにしておきます)*
+### 4. アプリケーションへのアクセス
 
-### 3. フロントエンドのセットアップ＆起動
+ブラウザで以下のURLにアクセスしてください。
 
-次に、画面側のプログラムを起動します。**新しいターミナルを開いて**作業してください。
-
-1.  **フロントエンドのディレクトリに移動**
-    ```bash
-    cd frontend
-    ```
-    *(バックエンドの `(venv)` が表示されていない、新しいターミナルで操作してください)*
-
-2.  **必要なライブラリをインストール**
-    ```bash
-    npm install
-    ```
-    *(完了まで少し時間がかかります)*
-
-3.  **フロントエンドを起動**
-    ```bash
-    npm start
-    ```
-    *(自動的にブラウザで `http://localhost:3000` が開き、アプリの画面が表示されれば成功です)*
+*   **フロントエンド（アプリ画面）**: http://localhost
 
 ---
+
+## 開発者向け情報
+
+### コンテナの停止
+
+```bash
+docker-compose down
+```
+
+### ログの確認
+
+```bash
+# 全てのログ
+docker-compose logs
+
+# 特定のサービスのログ（例：バックエンド）
+docker-compose logs web
+```
+
+### バックエンドの再起動（設定変更時など）
+
+```bash
+docker-compose restart web
+```

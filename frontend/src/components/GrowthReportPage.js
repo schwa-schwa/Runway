@@ -51,7 +51,7 @@ function GrowthReportPage() {
   useEffect(() => {
     const fetchChallenges = async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/challenges/");
+        const response = await fetch("/api/challenges/");
         if (!response.ok)
           throw new Error("チャレンジ一覧の取得に失敗しました。");
         const data = await response.json();
@@ -76,10 +76,10 @@ function GrowthReportPage() {
       try {
         const [historyRes, avgRes] = await Promise.all([
           fetch(
-            `http://localhost:8000/api/scores/history/?user=${currentUser.id}&challenge=${selectedChallenge}`
+            `/api/scores/history/?user=${currentUser.id}&challenge=${selectedChallenge}`
           ),
           fetch(
-            `http://localhost:8000/api/scores/average_comparison/?user=${currentUser.id}&challenge=${selectedChallenge}`
+            `/api/scores/average_comparison/?user=${currentUser.id}&challenge=${selectedChallenge}`
           ),
         ]);
 
