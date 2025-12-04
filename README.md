@@ -90,4 +90,5 @@ docker-compose logs web
 
 ```bash
 docker-compose restart web
+docker-compose restart frontend
 ```
