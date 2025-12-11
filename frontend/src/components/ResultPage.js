@@ -1,12 +1,73 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Paper, Button, Chip, CircularProgress, Divider, Tooltip as MuiTooltip } from '@mui/material';
+import { Box, Typography, Paper, Button, Chip, CircularProgress, Divider, Tooltip as MuiTooltip, Skeleton, Stack, keyframes } from '@mui/material';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useTheme } from '@mui/material/styles';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import ReactMarkdown from 'react-markdown';
+import confetti from 'canvas-confetti';
 
+// アニメーション定義
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+const fadeInScale = keyframes`
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+`;
+
+const pulse = keyframes`
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+`;
+
+// Confetti演出を発火する関数
+const fireConfetti = () => {
+  const duration = 3000;
+  const end = Date.now() + duration;
+
+  const colors = ['#4CAF50', '#2196F3', '#FFC107', '#E91E63', '#9C27B0'];
+
+  (function frame() {
+    confetti({
+      particleCount: 3,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0 },
+      colors: colors
+    });
+    confetti({
+      particleCount: 3,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1 },
+      colors: colors
+    });
+
+    if (Date.now() < end) {
+      requestAnimationFrame(frame);
+    }
+  }());
+};
 // バックエンドの英語キーと、グラフに表示する日本語名を対応させるためのオブジェクト
 const subjectMapping = {
   "symmetry": "左右の対称性",
@@ -446,9 +507,15 @@ function ResultPage() {
 
         // APIからのレスポンスを元に各stateを更新
         setResultData(data.main_score);
-        setIsBestScore(data.main_score.overall_score > data.personal_best);
+        const isBest = data.main_score.overall_score > data.personal_best;
+        setIsBestScore(isBest);
         setRank(data.ranking.rank);
         setTotalParticipants(data.ranking.total_participants);
+
+        // ベストスコア更新時にConfetti演出
+        if (isBest) {
+          setTimeout(() => fireConfetti(), 500);
+        }
 
       } catch (err) {
         console.error(err);
@@ -484,12 +551,64 @@ function ResultPage() {
     return () => clearInterval(timer);
   }, [resultData]);
 
-  // --- ローディング・エラー表示 ---
+  // --- スケルトンローディング表示 ---
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
-        <CircularProgress />
-        <Typography sx={{ mt: 2 }}>結果を読み込み中...</Typography>
+      <Box sx={{
+        minHeight: '100vh',
+        background: '#f5f5f5',
+        py: 4,
+        px: { xs: 2, md: 4 },
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 3,
+      }}>
+        <Skeleton variant="text" width={200} height={50} sx={{ mx: 'auto' }} />
+        
+        <Paper elevation={6} sx={{ borderRadius: '16px', bgcolor: 'white', overflow: 'hidden' }}>
+          {/* スコア表示エリア */}
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Skeleton variant="text" width={200} height={120} sx={{ mx: 'auto' }} />
+            <Skeleton variant="rounded" width={180} height={36} sx={{ mx: 'auto', mt: 2, borderRadius: '20px' }} />
+            <Skeleton variant="text" width={250} height={30} sx={{ mx: 'auto', mt: 2 }} />
+          </Box>
+          
+          <Divider />
+          
+          {/* レーダーチャートエリア */}
+          <Box sx={{ p: 4 }}>
+            <Skeleton variant="text" width={180} height={40} sx={{ mx: 'auto', mb: 2 }} />
+            <Skeleton variant="circular" width={300} height={300} sx={{ mx: 'auto' }} />
+          </Box>
+          
+          <Divider />
+          
+          {/* 詳細分析とAIコーチ */}
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, p: 4, gap: 3 }}>
+            <Box sx={{ flex: 1 }}>
+              <Skeleton variant="text" width={150} height={40} sx={{ mb: 2 }} />
+              <Stack spacing={2}>
+                {[1, 2, 3, 4].map(i => (
+                  <Box key={i}>
+                    <Skeleton variant="text" width="40%" height={30} />
+                    <Skeleton variant="text" width="100%" height={20} />
+                    <Skeleton variant="text" width="80%" height={20} />
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Skeleton variant="text" width={150} height={40} sx={{ mb: 2 }} />
+              <Skeleton variant="rectangular" height={200} sx={{ borderRadius: '8px' }} />
+            </Box>
+          </Box>
+        </Paper>
+        
+        {/* ボタンエリア */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 3 }}>
+          <Skeleton variant="rounded" width={180} height={50} sx={{ borderRadius: '25px' }} />
+          <Skeleton variant="rounded" width={200} height={50} sx={{ borderRadius: '25px' }} />
+        </Box>
       </Box>
     );
   }
@@ -527,12 +646,35 @@ function ResultPage() {
       gap: 3,
       boxSizing: 'border-box',
     }}>
-      <Typography variant="h4" component="h1" sx={{ mb: 1, textAlign: 'center', fontWeight: 'bold', color: theme.palette.grey[800] }}>
+      <Typography 
+        variant="h4" 
+        component="h1" 
+        sx={{ 
+          mb: 1, 
+          textAlign: 'center', 
+          fontWeight: 'bold', 
+          color: theme.palette.grey[800],
+          animation: `${fadeInUp} 0.6s ease-out`,
+        }}
+      >
         採点結果
       </Typography>
 
       {/* Main Unified Card */}
-      <Paper elevation={6} sx={{ borderRadius: '16px', bgcolor: 'white', overflow: 'hidden' }}>
+      <Paper 
+        elevation={6} 
+        sx={{ 
+          borderRadius: '16px', 
+          bgcolor: 'white', 
+          overflow: 'hidden',
+          animation: `${fadeInScale} 0.8s ease-out`,
+          transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+          }
+        }}
+      >
         
         {/* Score Display */}
         <ScoreDisplay

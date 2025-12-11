@@ -1,10 +1,31 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useState, useContext, useEffect } from "react";
 
 export const UserContext = createContext(null);
 
-export const UserProvider = ( { children }) => {
+const STORAGE_KEY = 'walksense_current_user';
 
-    const [currentUser, setCurrentUser] = useState(null);
+export const UserProvider = ( { children }) => {
+    // localStorageから初期値を読み込む
+    const [currentUser, setCurrentUserState] = useState(() => {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved ? JSON.parse(saved) : null;
+        } catch {
+            return null;
+        }
+    });
+
+    // カスタムセッター：localStorageも更新する
+    const setCurrentUser = (user) => {
+        setCurrentUserState(user);
+        if (user) {
+            // ログイン時：localStorageに保存
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+        } else {
+            // ログアウト時：localStorageから削除
+            localStorage.removeItem(STORAGE_KEY);
+        }
+    };
 
     const value = { currentUser, setCurrentUser };
 
