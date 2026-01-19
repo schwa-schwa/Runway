@@ -6,6 +6,7 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useTheme } from '@mui/material/styles';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import confetti from 'canvas-confetti';
 
 // アニメーション定義
@@ -73,7 +74,7 @@ const subjectMapping = {
   "symmetry": "左右の対称性",
   "trunk_uprightness": "体幹の直立性",
   "gravity_stability": "重心の安定性",
-  "rhythmic_accuracy": "リズムの正確性",
+  "walking_speed": "歩行速度",
 };
 
 const partMapping = {
@@ -214,7 +215,7 @@ const AiCoachView = ({ feedbackText }) => {
             color: theme.palette.secondary.dark,
         }
       }}>
-        <ReactMarkdown>{feedbackText}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{feedbackText}</ReactMarkdown>
       </Box>
     </Box>
   );
@@ -362,26 +363,32 @@ const GravitySection = ({ gravityData }) => {
   );
 };
 
-const RhythmSection = ({ rhythmData }) => {
+const WalkingSpeedSection = ({ walkingSpeedData }) => {
   const theme = useTheme();
-  if (!rhythmData) return null;
+  if (!walkingSpeedData) return null;
 
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold', color: theme.palette.primary.dark }}>
-        リズムの正確性
+        歩行速度
       </Typography>
       <Box sx={{ textAlign: 'center', my: 2 }}>
         <Typography variant="h4" component="p" sx={{ fontWeight: 'bold', color: theme.palette.secondary.main }}>
-          {rhythmData.score} <span style={{ fontSize: '1rem' }}>/ 25点</span>
+          {walkingSpeedData.score} <span style={{ fontSize: '1rem' }}>/ 25点</span>
         </Typography>
       </Box>
       <Box>
-        <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center' }}>
-          <MuiTooltip title="歩行リズム（ステップ間隔）のばらつき。0に近いほど一定のリズムで歩けています。">
+        <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <MuiTooltip title="10mを歩いた速度。1.4m/s以上が理想的とされています。">
             <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
           </MuiTooltip>
-          リズムのばらつき (標準偏差): <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{rhythmData.rhythm_consistency}</Typography>
+          歩行速度: <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{walkingSpeedData.speed_mps} m/s</Typography>
+        </Typography>
+        <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center' }}>
+          <MuiTooltip title="10mを歩くのにかかった時間（秒）。">
+            <InfoOutlinedIcon sx={{ mr: 1, color: 'text.secondary', fontSize: '1.1rem' }} />
+          </MuiTooltip>
+          歩行時間: <Typography component="span" sx={{ fontWeight: 'bold', ml: 1 }}>{walkingSpeedData.time_seconds} 秒</Typography>
         </Typography>
       </Box>
     </Box>
@@ -393,7 +400,7 @@ const DetailedAnalysisReport = ({ detailedResults }) => {
   const theme = useTheme();
   if (!detailedResults) return null;
 
-  const { symmetry, trunk_uprightness, gravity_stability, rhythmic_accuracy } = detailedResults;
+  const { symmetry, trunk_uprightness, gravity_stability, walking_speed } = detailedResults;
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 4 }}>
@@ -407,7 +414,7 @@ const DetailedAnalysisReport = ({ detailedResults }) => {
         <Divider />
         <GravitySection gravityData={gravity_stability} />
         <Divider />
-        <RhythmSection rhythmData={rhythmic_accuracy} />
+        <WalkingSpeedSection walkingSpeedData={walking_speed} />
       </Box>
     </Box>
   );
