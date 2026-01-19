@@ -34,8 +34,9 @@ class ScoringService:
     TRUNK_TILT_ANGLE_COEFFICIENT = 10
     RHYTHM_STD_DEV_COEFFICIENT = 15
 
-    def __init__(self, raw_landmarks):
+    def __init__(self, raw_landmarks, video_duration=5.0):
         self.raw_landmarks = raw_landmarks
+        self.video_duration = video_duration  # 動画の長さ（秒）
         self.chart_data = {}
         self.detailed_results = {}
         self.overall_score = 0
@@ -48,7 +49,7 @@ class ScoringService:
         self._calculate_symmetry()
         self._calculate_trunk_uprightness()
         self._calculate_gravity_stability()
-        self._calculate_rhythmic_accuracy()
+        self._calculate_walking_speed()
         self.overall_score = round(sum(self.chart_data.values()), 3)
         
         self.feedback_text = self._generate_feedback()
@@ -279,39 +280,25 @@ class ScoringService:
             'avg_head_sway_direction': round(avg_head_sway_direction, 3)
         }
   
-    def _calculate_rhythmic_accuracy(self):
-        """Calculates the consistency of the walking rhythm."""
-        left_y, right_y = [], []
-        required_ids = [self.LEFT_ANKLE, self.RIGHT_ANKLE]
-
-        for landmarks in self._iter_valid_landmarks(required_ids):
-            left_y.append(landmarks[self.LEFT_ANKLE]['y'])
-            right_y.append(landmarks[self.RIGHT_ANKLE]['y'])
-
-        def detect_step_intervals(y_list):
-            intervals = []
-            last_peak_index = None
-            for i in range(1, len(y_list) - 1):
-                if y_list[i - 1] > y_list[i] < y_list[i + 1]:
-                    if last_peak_index is not None:
-                        intervals.append(i - last_peak_index)
-                    last_peak_index = i
-            return intervals
-
-        all_intervals = detect_step_intervals(left_y) + detect_step_intervals(right_y)
+    def _calculate_walking_speed(self):
+        """Calculates the 10m walking speed score."""
+        # 10m歩行速度を計算
+        if self.video_duration <= 0:
+            speed_mps = 0
+        else:
+            speed_mps = 10.0 / self.video_duration  # m/s
         
-        score = 0
-        std_dev = 0
-        if all_intervals:
-            std_dev = statistics.stdev(all_intervals) if len(all_intervals) > 1 else 0
-            # Score out of 100 then scaled to 25
-            score_100 = self._calculate_score(std_dev, self.RHYTHM_STD_DEV_COEFFICIENT, max_points=100)
-            score = score_100 / 4.0
+        # スコアリング: 1.4m/s以上で満点(25点)
+        # 速度に応じて線形スコアリング
+        OPTIMAL_SPEED = 1.4  # 理想的な歩行速度 (m/s)
+        score_100 = min(100, (speed_mps / OPTIMAL_SPEED) * 100)
+        score = score_100 / 4.0
 
-        self.chart_data['rhythmic_accuracy'] = round(score, 3)
-        self.detailed_results['rhythmic_accuracy'] = {
+        self.chart_data['walking_speed'] = round(score, 3)
+        self.detailed_results['walking_speed'] = {
             'score': round(score, 3),
-            'rhythm_consistency': round(std_dev, 5)
+            'speed_mps': round(speed_mps, 3),
+            'time_seconds': round(self.video_duration, 2)
         }
 
     def _generate_feedback(self):
@@ -422,7 +409,8 @@ class ScoringService:
         try:
             client = genai.Client()
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                # モデル参照 https://ai.google.dev/gemini-api/docs/models?hl=ja&utm_source=chatgpt.com
+                model="gemini-3-flash-preview",
                 contents=prompt
             )
             
