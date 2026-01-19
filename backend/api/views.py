@@ -2,7 +2,9 @@ from django.shortcuts import render
 from rest_framework import viewsets, status, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.views import APIView
+from adrf.views import APIView as AsyncAPIView  # 非同期サポート版
 from rest_framework.response import Response
+from asgiref.sync import sync_to_async
 from .models import User, Challenge, Score
 from .serializers import UserSerializer, ChallengeSerializer, ScoreSerializer
 from .services import ScoringService
@@ -47,20 +49,26 @@ class ScoreViewSet(viewsets.ReadOnlyModelViewSet):
             'total_participants': total_participants
         })
     
-class ScoreCreateAPIView(APIView):
-    def post(self, request, *args, **kwargs):
+class ScoreCreateAPIView(AsyncAPIView):
+    """非同期API View（adrf使用）- AI生成中も他のリクエストを処理可能"""
+    async def post(self, request, *args, **kwargs):
         serializer = ScoreSerializer(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
+        # バリデーションにDBアクセスが含まれる可能性があるため、sync_to_async でラップ
+        await sync_to_async(serializer.is_valid)(raise_exception=True)
         
         raw_landmarks = serializer.validated_data['raw_landmarks']
+        video_duration = serializer.validated_data.get('video_duration', 5.0)
         
-        service = ScoringService(raw_landmarks)    
-        result = service.calculate_all()
+        service = ScoringService(raw_landmarks, video_duration=video_duration)
+        # サービスの計算を非同期実行（AI生成中も他のリクエストを処理可能）
+        result = await sync_to_async(service.calculate_all, thread_sensitive=False)()
         
-        instance = serializer.save(**result)
+        # DB保存も非同期実行
+        instance = await sync_to_async(serializer.save, thread_sensitive=True)(**result)
         
         response_serializer = ScoreSerializer(instance, context={'request': request})
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        # adrfの .adata を使用して非同期でシリアライズ結果を取得
+        return Response(await response_serializer.adata, status=status.HTTP_201_CREATED)
 
 
 class RankingAPIView(APIView):
@@ -168,7 +176,7 @@ class ScoreAverageComparisonView(APIView):
             'symmetry',
             'trunk_uprightness',
             'gravity_stability',
-            'rhythmic_accuracy',
+            'walking_speed',
         ]
         
         aggregations = {
