@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Typography, Box, CircularProgress, Button, LinearProgress, Paper, IconButton, ToggleButtonGroup, ToggleButton, Tooltip } from '@mui/material';
+import { Typography, Box, CircularProgress, Button, Paper, IconButton, ToggleButtonGroup, ToggleButton, Tooltip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { PoseLandmarker, FilesetResolver, DrawingUtils } from '@mediapipe/tasks-vision';
 import { useUser } from '../contexts/UserContext';
 
-const SCORING_DURATION = 5000; // 採点時間（ミリ秒）
+// 採点時間は手動で終了するため、定数は不要
 
 // --- Metric Definitions ---
 const METRIC_DEFINITIONS = {
@@ -39,11 +39,6 @@ const METRIC_DEFINITIONS = {
       
       return signedTiltAngle;
     }
-  },
-  stepCount: {
-    name: "歩数",
-    unit: "歩",
-    calculation: () => null // Stateful calculation handled separately
   }
 };
 
@@ -119,10 +114,8 @@ function ScoringPage() {
   const [poseLandmarker, setPoseLandmarker] = useState(null);
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [scoringStatus, setScoringStatus] = useState('idle'); // 'idle', 'countdown', 'scoring', 'finished'
-  const [scoringMode, setScoringMode] = useState('time'); // 'time' or 'manual'
   const [recordedLandmarks, setRecordedLandmarks] = useState([]);
   const [message, setMessage] = useState('');
-  const [progress, setProgress] = useState(0);
   
   const [realtimeMetrics, setRealtimeMetrics] = useState({});
   const [metricsVisibility, setMetricsVisibility] = useState(
@@ -135,17 +128,7 @@ function ScoringPage() {
   const requestRef = useRef();
   const scoringStatusRef = useRef(scoringStatus);
   const hasSubmittedRef = useRef(false);
-
-  // Step Counting Refs
-  const leftAnkleHistory = useRef([]);
-  const rightAnkleHistory = useRef([]);
-  const stepCountRef = useRef(0);
-
-  const handleModeChange = (event, newMode) => {
-    if (newMode !== null) {
-      setScoringMode(newMode);
-    }
-  };
+  const scoringStartTimeRef = useRef(null); // 採点開始時刻を記録
 
   // チャレンジ情報を取得
   useEffect(() => {
@@ -212,15 +195,10 @@ function ScoringPage() {
     };
   }, []);
 
-  // 採点シーケンスの管理（タイマー担当）
+  // 採点シーケンスの管理
   useEffect(() => {
-    let timer;
     if (scoringStatus === 'countdown') {
       setMessage('3');
-      // Reset step count on start
-      stepCountRef.current = 0;
-      leftAnkleHistory.current = [];
-      rightAnkleHistory.current = [];
       
       setTimeout(() => setMessage('2'), 1000);
       setTimeout(() => setMessage('1'), 2000);
@@ -228,32 +206,16 @@ function ScoringPage() {
         setMessage('START!');
         setTimeout(() => setScoringStatus('scoring'), 500);
       }, 3000);
-    } else if (scoringStatus === 'scoring' && scoringMode === 'time') {
+    } else if (scoringStatus === 'scoring') {
       setMessage('');
-      setProgress(0);
-      const startTime = Date.now();
-      timer = setInterval(() => {
-        const elapsedTime = Date.now() - startTime;
-        const currentProgress = Math.min(100, (elapsedTime / SCORING_DURATION) * 100);
-        setProgress(currentProgress);
-        if (currentProgress >= 100) {
-          clearInterval(timer);
-          setMessage('FINISH');
-          setScoringStatus('finished');
-        }
-      }, 50);
+      scoringStartTimeRef.current = Date.now(); // 採点開始時刻を記録
     }
-
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [scoringStatus, scoringMode]);
+  }, [scoringStatus]);
 
   // Reset submitted ref when status changes to idle
   useEffect(() => {
     if (scoringStatus === 'idle') {
       hasSubmittedRef.current = false;
-      stepCountRef.current = 0; // Reset display as well if needed
     }
   }, [scoringStatus]);
 
@@ -277,8 +239,9 @@ function ScoringPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               user: currentUser.id,
-              challenge: challengeId,
+              challenge: parseInt(challengeId, 10),
               raw_landmarks: recordedLandmarks,
+              video_duration: scoringStartTimeRef.current ? (Date.now() - scoringStartTimeRef.current) / 1000 : 0, // 実際の経過時間（秒）
             })
           });
           const resultData = await response.json();
@@ -318,39 +281,6 @@ function ScoringPage() {
             const landmarks = results.landmarks[0];
             
             const metrics = calculateAllRealtimeMetrics(landmarks);
-
-            // --- Step Counting Logic ---
-            if (scoringStatusRef.current === 'scoring') {
-              const LEFT_ANKLE = 27;
-              const RIGHT_ANKLE = 28;
-              const leftY = landmarks[LEFT_ANKLE].y;
-              const rightY = landmarks[RIGHT_ANKLE].y;
-
-              const updateHistoryAndCheckStep = (historyRef, currentY) => {
-                historyRef.current.push(currentY);
-                if (historyRef.current.length > 3) {
-                  historyRef.current.shift();
-                }
-                if (historyRef.current.length === 3) {
-                  const [y_prev2, y_prev1, y_curr] = historyRef.current;
-                  // Local minimum detection (highest point in screen coordinates)
-                  // y increases downwards, so min y is max height
-                  if (y_prev2 > y_prev1 && y_prev1 < y_curr) {
-                    return true;
-                  }
-                }
-                return false;
-              };
-
-              if (updateHistoryAndCheckStep(leftAnkleHistory, leftY)) {
-                stepCountRef.current += 1;
-              }
-              if (updateHistoryAndCheckStep(rightAnkleHistory, rightY)) {
-                stepCountRef.current += 1;
-              }
-            }
-            
-            metrics.stepCount = stepCountRef.current;
             setRealtimeMetrics(metrics);
             
             if (scoringStatusRef.current === 'scoring') {
@@ -468,7 +398,6 @@ function ScoringPage() {
 
 
       <Paper elevation={3} sx={{ width: '100%', maxWidth: '1280px', overflow: 'hidden' }}>
-        {scoringStatus === 'scoring' && scoringMode === 'time' && <LinearProgress variant="determinate" value={progress} />}
         <Box sx={{ position: 'relative' }}>
           <RealtimeMetricsDisplay metrics={realtimeMetrics} visibility={metricsVisibility} />
           <video 
@@ -488,23 +417,13 @@ function ScoringPage() {
       <Box sx={{ my: 2, height: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2}}>
         {scoringStatus === 'idle' && (
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-            <ToggleButtonGroup
-              color="primary"
-              value={scoringMode}
-              exclusive
-              onChange={handleModeChange}
-              aria-label="Scoring Mode"
-            >
-              <ToggleButton value="time">時間制</ToggleButton>
-              <ToggleButton value="manual">手動</ToggleButton>
-            </ToggleButtonGroup>
             <MetricsVisibilityControl visibility={metricsVisibility} setVisibility={setMetricsVisibility} />
             <Button variant='contained' size='large' onClick={handleStartScoring}>
               採点開始
             </Button>
           </Box>
         )}
-        {scoringStatus === 'scoring' && scoringMode === 'manual' && (
+        {scoringStatus === 'scoring' && (
           <Button variant='contained' size='large' color='error' onClick={handleStopScoring}>
             採点終了
           </Button>
