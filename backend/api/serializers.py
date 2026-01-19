@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from adrf.serializers import ModelSerializer
 from .models import User, Challenge, Score
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -19,7 +20,9 @@ class ChallengeSerializer(serializers.HyperlinkedModelSerializer):
         model = Challenge
         fields = ['url', 'id', 'name', 'description', 'has_posing']
         
-class ScoreSerializer(serializers.ModelSerializer):
+class ScoreSerializer(ModelSerializer):
+    # video_duration is now stored in DB
+    video_duration = serializers.FloatField(required=False, default=5.0)
     
     class Meta:
         model = Score
@@ -32,6 +35,7 @@ class ScoreSerializer(serializers.ModelSerializer):
             'chart_data',
             'raw_landmarks',
             'detailed_results',
+            'video_duration',
             'created_at',
         ]
         read_only_fields = [
@@ -41,3 +45,4 @@ class ScoreSerializer(serializers.ModelSerializer):
             'detailed_results',
             'created_at',
         ]
+

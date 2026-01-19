@@ -54,6 +54,7 @@ class Score(models.Model):
     chart_data = models.JSONField() 
     raw_landmarks = models.JSONField()
     detailed_results = models.JSONField(blank=True, null=True)
+    video_duration = models.FloatField(default=5.0, verbose_name='動画時間(秒)')
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
